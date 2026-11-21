@@ -60,6 +60,17 @@ Color languageColor(String code) {
   return Color(kLanguagePalette[sum % kLanguagePalette.length]);
 }
 
+Color resolvedTextColor(BuildContext context, int argb) {
+  final theme = Theme.of(context);
+  if (theme.brightness == Brightness.dark && argb == 0xFF000000) {
+    return theme.colorScheme.onSurface;
+  }
+  if (theme.brightness == Brightness.light && argb == 0xFFFFFFFF) {
+    return theme.colorScheme.onSurface;
+  }
+  return Color(argb);
+}
+
 /// Fonts available in the editor. The first two are bundled in assets/fonts.
 const List<String> kFonts = [
   'Noto Nastaliq Urdu',

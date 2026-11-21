@@ -75,12 +75,25 @@ class FontToolbar extends StatelessWidget {
                 ? current.fontFamily
                 : kFonts.first,
             isDense: true,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Font', isDense: true),
+            selectedItemBuilder: (_) => [
+              for (final f in kFonts)
+                Text(
+                  f,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontFamily: f),
+                ),
+            ],
             items: [
               for (final f in kFonts)
                 DropdownMenuItem(
                   value: f,
-                  child: Text(f, style: TextStyle(fontFamily: f)),
+                  child: Text(
+                    f,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: f),
+                  ),
                 ),
             ],
             onChanged: enabled
@@ -170,7 +183,8 @@ class FontToolbar extends StatelessWidget {
         ),
         IconButton(
           tooltip: 'Text color',
-          icon: Icon(Icons.format_color_text, color: Color(current.color)),
+          icon: Icon(Icons.format_color_text,
+              color: resolvedTextColor(context, current.color)),
           onPressed: enabled ? () => _pickColor(context, current) : null,
         ),
       ],

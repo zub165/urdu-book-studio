@@ -70,6 +70,7 @@ class _BookScreenState extends State<BookScreen> {
           builder: (_) => ChapterEditor(
             book: book,
             chapter: chapter,
+            chapters: book.chapters,
             onChanged: _save,
           ),
         ))

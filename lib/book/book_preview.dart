@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants.dart';
 import '../core/text_direction.dart';
 import '../models/book.dart';
 
-Widget previewBlock(Block block, String languageCode) {
+Widget previewBlock(BuildContext context, Block block, String languageCode) {
   final rtl = block.resolvedRtl(languageCode);
   final style = block.style;
   final heading = switch (block.type) {
@@ -31,7 +32,7 @@ Widget previewBlock(Block block, String languageCode) {
         fontSize: size,
         height: style.lineHeight,
         letterSpacing: style.letterSpacing,
-        color: Color(style.color),
+        color: resolvedTextColor(context, style.color),
         fontWeight: heading || style.bold ? FontWeight.bold : FontWeight.normal,
         fontStyle: block.type == BlockType.quote || style.italic
             ? FontStyle.italic
@@ -65,7 +66,8 @@ class ChapterPreview extends StatelessWidget {
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
           ),
           const Divider(height: 32),
-          for (final block in chapter.blocks) previewBlock(block, languageCode),
+          for (final block in chapter.blocks)
+            previewBlock(context, block, languageCode),
         ],
       ),
     );
@@ -129,7 +131,7 @@ class BookPreview extends StatelessWidget {
                     ),
                     const Divider(height: 24),
                     for (final block in chapter.blocks)
-                      previewBlock(block, book.languageCode),
+                      previewBlock(context, block, book.languageCode),
                   ],
                 ),
               ),

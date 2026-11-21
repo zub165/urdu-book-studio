@@ -120,6 +120,7 @@ test/
 - AI translation/outline dialogs added (Gemini/OpenAI), with API key stored locally.
 - Book-file import added for JSON, TXT, MD, DOCX, RTF and EPUB; editable JSON exporter added.
 - Live chapter/book preview and colorful language-coded library added.
+- Editor workspace now has Write/Format/Preview/Outline/AI tabs, a chapter/tools drawer and a side-by-side live preview on wide screens.
 - GitHub repository: `zub165/urdu-book-studio`; web app deployed to GitHub Pages.
 - Note: CI workflow cannot be pushed with the current token (`workflow` scope missing); deployment is manual to the `gh-pages` branch.
 - Pending: device testing on every platform and full KPF workflow guide.

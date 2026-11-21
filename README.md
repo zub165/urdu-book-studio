@@ -19,7 +19,9 @@ Live web app: https://zub165.github.io/urdu-book-studio/
 - AI translation (English to Urdu and 11 other languages) and AI heading outlines,
   with template, font, size and color controls before inserting into the chapter
   (add your Gemini or OpenAI key under the editor's AI menu)
-- live book preview while writing and in the book view; colorful language-coded library
+- editor workspace with Write, Format, Preview, Outline and AI tabs, a chapter/tools
+  side menu, and a live preview pane beside the editor on wide screens
+- live book preview in the book view; colorful language-coded library
 - book metadata, chapters with add/rename/delete/reorder, and heading-based TOC in exports
 - local JSON storage that works on web, Android and desktop
 - import book files (JSON, TXT, MD, DOCX, RTF, EPUB) into the library or an open book
