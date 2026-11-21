@@ -56,9 +56,16 @@ variable TTFs under the SIL Open Font License; licence texts are included).
 
 ## Deployment
 
-Pushes to `main` run `.github/workflows/deploy.yml`, which analyzes, tests,
-builds the web app with the GitHub Pages base path, and publishes `build/web`
-to the `gh-pages` branch. Set GitHub Pages to deploy from `gh-pages / (root)`.
+The web app is published to GitHub Pages from the `gh-pages` branch. To refresh
+it after changes:
+
+```bash
+flutter test
+flutter build web --release --base-href /urdu-book-studio/
+git subtree push --prefix build/web origin gh-pages
+```
+
+GitHub Pages must be set to deploy from `gh-pages / (root)`.
 
 ## Known limits (v1)
 
