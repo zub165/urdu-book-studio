@@ -72,7 +72,7 @@ lib/
     text_exporter.dart      Builds .txt and .md
   storage/
     book_repository.dart    Save and load books (JSON)
-    book_importer.dart      Imports JSON, TXT, MD, DOCX and RTF
+    book_importer.dart      Imports JSON, TXT, MD, DOCX, RTF and EPUB
   services/
     ai_service.dart         Gemini/OpenAI translation and outline generation
 assets/
@@ -118,7 +118,7 @@ test/
 - Platform folders generated for Android, Web, macOS, Windows and Linux.
 - Verified with Flutter 3.47.2: `flutter analyze` (no issues), `flutter test` (all tests pass), `flutter build web --release` (success).
 - AI translation/outline dialogs added (Gemini/OpenAI), with API key stored locally.
-- Book-file import added for JSON, TXT, MD, DOCX and RTF; editable JSON exporter added.
+- Book-file import added for JSON, TXT, MD, DOCX, RTF and EPUB; editable JSON exporter added.
 - Live chapter/book preview and colorful language-coded library added.
 - GitHub repository: `zub165/urdu-book-studio`; web app deployed to GitHub Pages.
 - Note: CI workflow cannot be pushed with the current token (`workflow` scope missing); deployment is manual to the `gh-pages` branch.

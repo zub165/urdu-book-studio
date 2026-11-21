@@ -34,6 +34,79 @@ void main() {
     });
   });
 
+  group('EPUB import', () {
+    test('round-trips exported chapters and metadata', () async {
+      final book = sampleBook();
+      book.chapters.first.title = 'پہلا باب';
+      final bytes = await EpubExporter().export(book);
+      final restored = await const BookImporter(languageCode: 'ur')
+          .import(bytes, 'book.epub');
+      expect(restored.title, book.title);
+      expect(restored.author, book.author);
+      expect(restored.languageCode, 'ur');
+      expect(restored.chapters, hasLength(1));
+      expect(restored.chapters.first.title, 'پہلا باب');
+      expect(
+        restored.chapters.first.blocks.map((block) => block.text),
+        contains('یہ ایک جملہ ہے۔'),
+      );
+    });
+
+    test('reads a third-party EPUB with relative paths and entities', () async {
+      final archive = Archive()
+        ..addFile(zipTextEntry('mimetype', 'application/epub+zip'))
+        ..addFile(zipTextEntry(
+          'META-INF/container.xml',
+          '<?xml version="1.0"?><container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">'
+          '<rootfiles><rootfile full-path="OPS/package.opf" '
+          'media-type="application/oebps-package+xml"/></rootfiles></container>',
+        ))
+        ..addFile(zipTextEntry(
+          'OPS/package.opf',
+          '<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" '
+          'xmlns:dc="http://purl.org/dc/elements/1.1/" version="3.0" '
+          'unique-identifier="bookid"><metadata>'
+          '<dc:title>Sample EPUB</dc:title><dc:creator>Tester</dc:creator>'
+          '<dc:language>en</dc:language></metadata><manifest>'
+          '<item id="c1" href="Text/ch1.xhtml" media-type="application/xhtml+xml"/>'
+          '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" '
+          'properties="nav"/></manifest><spine>'
+          '<itemref idref="nav" linear="no"/><itemref idref="c1"/>'
+          '</spine></package>',
+        ))
+        ..addFile(zipTextEntry(
+          'OPS/Text/ch1.xhtml',
+          '<?xml version="1.0"?><html xmlns="http://www.w3.org/1999/xhtml">'
+          '<head><title>Chapter One</title></head><body>'
+          '<h1>Chapter One</h1><p>Hello &amp; welcome</p>'
+          '<blockquote>Quoted text</blockquote></body></html>',
+        ));
+      final bytes = Uint8List.fromList(ZipEncoder().encode(archive)!);
+      final restored = await const BookImporter(languageCode: 'ur')
+          .import(bytes, 'book.epub');
+      expect(restored.title, 'Sample EPUB');
+      expect(restored.author, 'Tester');
+      expect(restored.languageCode, 'en');
+      expect(restored.chapters, hasLength(1));
+      expect(restored.chapters.first.title, 'Chapter One');
+      final blocks = restored.chapters.first.blocks;
+      expect(blocks[0].text, 'Hello & welcome');
+      expect(blocks[0].type, BlockType.paragraph);
+      expect(blocks[1].text, 'Quoted text');
+      expect(blocks[1].type, BlockType.quote);
+    });
+
+    test('rejects a zip without a container', () async {
+      final archive = Archive()
+        ..addFile(zipTextEntry('mimetype', 'application/epub+zip'));
+      final bytes = Uint8List.fromList(ZipEncoder().encode(archive)!);
+      await expectLater(
+        () => const BookImporter().import(bytes, 'broken.epub'),
+        throwsA(isA<FormatException>()),
+      );
+    });
+  });
+
   group('exporters', () {
     test('DOCX is a zip containing word/document.xml with bidi paragraphs', () async {
       final bytes = await DocxExporter().export(sampleBook());

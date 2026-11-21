@@ -22,7 +22,7 @@ Live web app: https://zub165.github.io/urdu-book-studio/
 - live book preview while writing and in the book view; colorful language-coded library
 - book metadata, chapters with add/rename/delete/reorder, and heading-based TOC in exports
 - local JSON storage that works on web, Android and desktop
-- import book files (JSON, TXT, MD, DOCX, RTF) into the library or an open book
+- import book files (JSON, TXT, MD, DOCX, RTF, EPUB) into the library or an open book
 - exports: DOCX, DOC (HTML-based), PDF, RTF, EPUB 3, HTML, TXT, Markdown and editable JSON
 
 ## Setup
@@ -71,6 +71,7 @@ variable TTFs under the SIL Open Font License; licence texts are included).
 | TXT / Markdown | Paragraphs and headings become editable blocks |
 | DOCX | Paragraphs and Heading 1-3 styles are read from `word/document.xml` |
 | RTF | Basic text and paragraph import; complex formatting is ignored |
+| EPUB | EPUB 2/3 spine order, metadata, headings, paragraphs and quotes; styles are not preserved |
 
 ## Deployment
 
