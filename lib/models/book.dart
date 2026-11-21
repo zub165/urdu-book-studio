@@ -24,6 +24,7 @@ class TextStyleData {
   final bool underline;
   final int color; // ARGB
   final double lineHeight; // multiplier
+  final double letterSpacing; // points
 
   const TextStyleData({
     this.fontFamily = 'Roboto',
@@ -33,6 +34,7 @@ class TextStyleData {
     this.underline = false,
     this.color = 0xFF000000,
     this.lineHeight = 1.5,
+    this.letterSpacing = 0,
   });
 
   TextStyleData copyWith({
@@ -43,6 +45,7 @@ class TextStyleData {
     bool? underline,
     int? color,
     double? lineHeight,
+    double? letterSpacing,
   }) =>
       TextStyleData(
         fontFamily: fontFamily ?? this.fontFamily,
@@ -52,6 +55,7 @@ class TextStyleData {
         underline: underline ?? this.underline,
         color: color ?? this.color,
         lineHeight: lineHeight ?? this.lineHeight,
+        letterSpacing: letterSpacing ?? this.letterSpacing,
       );
 
   Map<String, dynamic> toJson() => {
@@ -62,6 +66,7 @@ class TextStyleData {
         'underline': underline,
         'color': color,
         'lineHeight': lineHeight,
+        'letterSpacing': letterSpacing,
       };
 
   factory TextStyleData.fromJson(Map<String, dynamic> j) => TextStyleData(
@@ -72,6 +77,7 @@ class TextStyleData {
         underline: j['underline'] as bool? ?? false,
         color: (j['color'] as num?)?.toInt() ?? 0xFF000000,
         lineHeight: (j['lineHeight'] as num?)?.toDouble() ?? 1.5,
+        letterSpacing: (j['letterSpacing'] as num?)?.toDouble() ?? 0,
       );
 }
 

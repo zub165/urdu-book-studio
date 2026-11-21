@@ -46,6 +46,8 @@ class RtfExporter extends BookExporter {
         bold ? r'\b' : r'\b0',
         italic ? r'\i' : r'\i0',
         s.underline ? r'\ul' : r'\ulnone',
+        if (s.letterSpacing != 0)
+          '\\expndtw${(s.letterSpacing * 20).round()}',
         if (rtl) r'\rtlch',
         if (lang == 'ur') r'\lang1056',
       ].join();

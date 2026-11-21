@@ -84,7 +84,8 @@ class DocxExporter extends BookExporter {
 
     final pPr = StringBuffer('<w:pPr>');
     if (rtl) pPr.write('<w:bidi/>');
-    pPr.write('<w:spacing w:line="${(s.lineHeight * 240).round()}" w:lineRule="auto"/>');
+    pPr.write('<w:spacing w:val="${(s.letterSpacing * 20).round()}" '
+        'w:line="${(s.lineHeight * 240).round()}" w:lineRule="auto"/>');
     if (type == BlockType.quote) pPr.write('<w:ind w:left="720" w:right="720"/>');
     if (type == BlockType.centered || type == BlockType.heading1) {
       pPr.write('<w:jc w:val="center"/>');

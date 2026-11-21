@@ -30,7 +30,8 @@ A Flutter application (Windows/macOS/Linux desktop, Web, Android) for writing an
 4. **Export formats**
    - **DOCX** (Office Open XML, real Word file, RTL-aware).
    - **DOC** (legacy Word): produced as Word-readable HTML saved with a .doc extension. Limitation: not a true binary Word 97-2003 file.
-   - **RTF** (Rich Text Format, plain text readable everywhere).
+    - **PDF** (real vector PDF with OpenType shaping for Urdu, pure Dart so it works on web).
+    - **RTF** (Rich Text Format, plain text readable everywhere).
    - **EPUB 3** (reflowable e-book, RTL via `page-progression-direction` and `dir` attributes).
    - **KPF** (Kindle Package Format): proprietary to Amazon. Not generated directly by this app. Export EPUB or DOCX, then open in **Kindle Create** (see the screenshots: Reflowable layout, then Export as KPF) or upload to **Kindle Direct Publishing**, which accepts DOCX and EPUB.
    - **Plain text (.txt)** and **Markdown (.md)**.
@@ -67,6 +68,7 @@ lib/
     exporter.dart           Export interface and format registry
     exporter_base.dart      Shared zip/XML helpers
     docx_exporter.dart      Builds .docx (zip with WordprocessingML)
+    pdf_exporter.dart       Builds a shaped vector PDF (pure Dart, works on web)
     rtf_exporter.dart       Builds .rtf
     epub_exporter.dart      Builds .epub 3
     html_exporter.dart      Builds .html and .doc (Word-readable HTML)
@@ -81,7 +83,7 @@ test/
 
 ## Key technical decisions
 - **Framework:** Flutter 3.x, Dart null-safety.
-- **Key packages:** `archive` (zip for DOCX and EPUB), `xml` (safe XML building), `path_provider`, `file_picker`, `share_plus`, `shared_preferences`, `google_fonts` (optional), `uuid`.
+- **Key packages:** `archive` (zip for DOCX and EPUB), `payv` (pure-Dart OpenType shaping and PDF), `path_provider`, `file_picker`, `share_plus`, `shared_preferences`, `google_fonts` (optional), `uuid`.
 - **Data model:** Book to Chapters to Blocks. Each block holds plain text plus a style. Text is stored as UTF-8, so Urdu characters are preserved in every format.
 - **RTL:** `Directionality` and `TextDirection.rtl` in the editor. Each block has a `direction` field, which defaults from the book language. Export writes `w:bidi` and `w:rtl` in DOCX, `dir="rtl"` in HTML and EPUB, and `\rtlch` in RTF.
 - **Shaping:** Flutter's text engine shapes Urdu text. Bundled fonts ensure Nastaliq joins correctly on every platform.
@@ -108,7 +110,7 @@ test/
 - Milestone 1 (models, JSON storage): done.
 - Milestone 2 (chapter editor with RTL blocks and font toolbar): first version done.
 - Milestone 3 (library, create and open books): first version done.
-- Milestone 4 (TXT, MD, HTML, DOC, RTF, DOCX exporters): first version done.
+- Milestone 4 (TXT, MD, HTML, DOC, RTF, DOCX, PDF exporters): first version done.
 - Milestone 5 (EPUB 3 exporter): first version done.
 - Bundled fonts added from Google Fonts (SIL OFL): Noto Nastaliq Urdu and Noto Naskh Arabic variable TTFs.
 - Platform folders generated for Android, Web, macOS, Windows and Linux.

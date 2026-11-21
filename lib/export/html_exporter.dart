@@ -11,7 +11,8 @@ String cssForStyle(TextStyleData s) =>
     'font-style:${s.italic ? 'italic' : 'normal'};'
     'text-decoration:${s.underline ? 'underline' : 'none'};'
     'color:#${hexRgb(s.color)};'
-    'line-height:${s.lineHeight};';
+    'line-height:${s.lineHeight};'
+    'letter-spacing:${s.letterSpacing}pt;';
 
 /// Renders one block as an HTML element with direction and inline style.
 /// Also used by the EPUB exporter (output is valid XHTML).

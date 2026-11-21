@@ -13,7 +13,9 @@ Live web app: https://zub165.github.io/urdu-book-studio/
 - multilingual library: Urdu, English, Arabic, Persian, Pashto, Sindhi, Hindi,
   Punjabi, Hebrew, French and Spanish; RTL is detected from the language code
 - paragraph editor with headings, quotes, centered text and per-paragraph direction
-- font controls: bundled Urdu fonts, size, line height, bold, italic, underline
+- font controls: bundled Urdu fonts, size, line height, letter spacing, color,
+  bold, italic and underline
+- editor utilities: undo/redo, find and replace, word and character counts
 - book metadata, chapters with add/rename/delete/reorder, and heading-based TOC in exports
 - local JSON storage that works on web, Android and desktop
 - exports: DOCX, DOC (HTML-based), RTF, EPUB 3, HTML, TXT and Markdown
@@ -46,6 +48,7 @@ variable TTFs under the SIL Open Font License; licence texts are included).
 | Format | Status | Notes |
 |---|---|---|
 | DOCX | Implemented | Real Word file, RTL paragraphs, Urdu language tags |
+| PDF | Implemented | Real vector PDF with OpenType shaping for Urdu; works on web too |
 | DOC | Implemented (limited) | HTML saved as .doc; Word opens it, but it is not the binary format |
 | RTF | Implemented | Unicode-escaped Urdu, RTL paragraphs |
 | EPUB 3 | Implemented | Reflowable, RTL spine, navigation document |

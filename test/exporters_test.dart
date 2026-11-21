@@ -13,6 +13,8 @@ Book sampleBook() {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('language helpers', () {
     test('Urdu and Arabic are right-to-left', () {
       expect(isRtlLanguage('ur'), isTrue);
@@ -56,6 +58,20 @@ void main() {
       expect(rtf, startsWith('{\\rtf1'));
       expect(rtf, contains('\\rtlpar'));
       expect(rtf, contains('\\u'));
+    });
+
+    test('PDF is a real PDF document with embedded fonts', () async {
+      final bytes = await PdfExporter().export(sampleBook());
+      expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
+      expect(bytes.length, greaterThan(500));
+      expect(String.fromCharCodes(bytes), contains('NotoNastaliqUrdu'));
+    });
+
+    test('text style keeps letter spacing in JSON', () {
+      const style = TextStyleData(letterSpacing: 1.5, color: 0xFF123456);
+      final restored = TextStyleData.fromJson(style.toJson());
+      expect(restored.letterSpacing, 1.5);
+      expect(restored.color, 0xFF123456);
     });
 
     test('every registered exporter returns bytes', () async {
