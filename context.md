@@ -45,25 +45,21 @@ A Flutter application (Windows/macOS/Linux desktop, Web, Android) for writing an
 ## Architecture
 ```
 lib/
-  main.dart                 App entry, theme, locale setup
-  app.dart                  MaterialApp, routes, l10n
+  main.dart                 App entry, theme, MaterialApp
   core/
-    constants.dart          Supported languages, fonts, export formats
+    constants.dart          Supported languages, fonts, colors, export formats
     text_direction.dart     Detects RTL from language code or script
   models/
-    book.dart               Book, metadata
-    chapter.dart            Chapter (list of blocks)
-    block.dart              Paragraph block with style runs
-    style.dart              Text style model (font, size, weight, color, direction)
-  storage/
-    book_repository.dart    Save and load books (JSON)
+    book.dart               Book, chapters, blocks, text styles (JSON serializable)
   book/
-    book_screen.dart        Book details, chapter list and export menu
+    book_screen.dart        Book details, chapter list, import and export menu
+    book_preview.dart       Live formatted preview of a chapter or whole book
   editor/
-    chapter_editor.dart     Chapter editor with RTL-aware blocks
+    chapter_editor.dart     Chapter editor with RTL-aware blocks and AI menu
     font_toolbar.dart       Font and style controls
+    ai_dialogs.dart         AI translate, heading outline and API key dialogs
   library/
-    library_screen.dart     List of books, create and open
+    library_screen.dart     Colorful library with search, create and import
   export/
     exporter.dart           Export interface and format registry
     exporter_base.dart      Shared zip/XML helpers
@@ -72,8 +68,13 @@ lib/
     rtf_exporter.dart       Builds .rtf
     epub_exporter.dart      Builds .epub 3
     html_exporter.dart      Builds .html and .doc (Word-readable HTML)
+    json_exporter.dart      Builds an editable .json book file
     text_exporter.dart      Builds .txt and .md
-  services/                 Reserved for platform save/share helpers
+  storage/
+    book_repository.dart    Save and load books (JSON)
+    book_importer.dart      Imports JSON, TXT, MD, DOCX and RTF
+  services/
+    ai_service.dart         Gemini/OpenAI translation and outline generation
 assets/
   fonts/                    Bundled Noto Nastaliq Urdu and Noto Naskh Arabic (variable TTF + OFL licences)
 test/
@@ -83,21 +84,22 @@ test/
 
 ## Key technical decisions
 - **Framework:** Flutter 3.x, Dart null-safety.
-- **Key packages:** `archive` (zip for DOCX and EPUB), `payv` (pure-Dart OpenType shaping and PDF), `path_provider`, `file_picker`, `share_plus`, `shared_preferences`, `google_fonts` (optional), `uuid`.
+- **Key packages:** `archive` (zip for DOCX/EPUB/import), `xml` (import/docx), `payv` (pure-Dart OpenType shaping and PDF), `http` (AI APIs), `file_picker`, `share_plus`, `shared_preferences`, `uuid`.
 - **Data model:** Book to Chapters to Blocks. Each block holds plain text plus a style. Text is stored as UTF-8, so Urdu characters are preserved in every format.
 - **RTL:** `Directionality` and `TextDirection.rtl` in the editor. Each block has a `direction` field, which defaults from the book language. Export writes `w:bidi` and `w:rtl` in DOCX, `dir="rtl"` in HTML and EPUB, and `\rtlch` in RTF.
 - **Shaping:** Flutter's text engine shapes Urdu text. Bundled fonts ensure Nastaliq joins correctly on every platform.
 - **Web limits:** Writing files uses browser downloads. No `dart:io` on web, so file operations go through conditional imports.
 
 ## Milestones
-1. Project scaffold, models, JSON storage. (in progress)
+1. Project scaffold, models, JSON storage.
 2. Editor with RTL paragraphs and font toolbar.
 3. Library screen, create and open books.
-4. Exporters: TXT, MD, HTML, DOC, RTF, DOCX.
+4. Exporters: TXT, MD, HTML, DOC, RTF, DOCX, PDF.
 5. EPUB 3 exporter with table of contents.
 6. Import from DOCX and TXT.
-7. Responsive layout for Android and web, testing on each platform.
-8. KPF workflow guide and documentation.
+7. AI translation and outlines, live preview and colorful responsive UI.
+8. Responsive layout for Android and web, testing on each platform.
+9. KPF workflow guide and documentation.
 
 ## Open decisions
 - Include a rich-text editor package such as `flutter_quill`, or keep a custom block editor? Current choice: custom block editor for full control of RTL and Nastaliq shaping.
@@ -115,5 +117,9 @@ test/
 - Bundled fonts added from Google Fonts (SIL OFL): Noto Nastaliq Urdu and Noto Naskh Arabic variable TTFs.
 - Platform folders generated for Android, Web, macOS, Windows and Linux.
 - Verified with Flutter 3.47.2: `flutter analyze` (no issues), `flutter test` (all tests pass), `flutter build web --release` (success).
+- AI translation/outline dialogs added (Gemini/OpenAI), with API key stored locally.
+- Book-file import added for JSON, TXT, MD, DOCX and RTF; editable JSON exporter added.
+- Live chapter/book preview and colorful language-coded library added.
 - GitHub repository: `zub165/urdu-book-studio`; web app deployed to GitHub Pages.
-- Pending: milestone 6 (DOCX/TXT import), milestone 7 (device testing on every platform), milestone 8 (full KPF guide).
+- Note: CI workflow cannot be pushed with the current token (`workflow` scope missing); deployment is manual to the `gh-pages` branch.
+- Pending: device testing on every platform and full KPF workflow guide.

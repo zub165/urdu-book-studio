@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:urdu_book_studio/core/text_direction.dart';
 import 'package:urdu_book_studio/export/exporter.dart';
 import 'package:urdu_book_studio/models/book.dart';
+import 'package:urdu_book_studio/services/ai_service.dart';
+import 'package:urdu_book_studio/storage/book_importer.dart';
 
 Book sampleBook() {
   final book = Book.create(title: 'اردو کتاب', author: 'ملک', languageCode: 'ur');
@@ -72,6 +75,54 @@ void main() {
       final restored = TextStyleData.fromJson(style.toJson());
       expect(restored.letterSpacing, 1.5);
       expect(restored.color, 0xFF123456);
+    });
+
+    test('JSON book file round-trips with styles', () async {
+      final book = sampleBook();
+      book.chapters.first.blocks.first.style = const TextStyleData(
+        fontFamily: 'Noto Naskh Arabic',
+        color: 0xFF123456,
+        letterSpacing: 1.5,
+      );
+      final bytes = await JsonExporter().export(book);
+      final restored = await const BookImporter(languageCode: 'ur')
+          .import(bytes, 'book.json');
+      expect(restored.title, book.title);
+      expect(restored.chapters.first.blocks.length,
+          book.chapters.first.blocks.length);
+      expect(
+        restored.chapters.first.blocks.first.style.color,
+        0xFF123456,
+      );
+      expect(
+        restored.chapters.first.blocks.first.style.letterSpacing,
+        1.5,
+      );
+    });
+
+    test('markdown import keeps heading templates', () async {
+      final bytes = Uint8List.fromList(utf8.encode('# Title\n## سرخی\nمتن'));
+      final book = await const BookImporter(languageCode: 'ur')
+          .import(bytes, 'book.md');
+      final blocks = book.chapters.first.blocks;
+      expect(blocks[0].type, BlockType.heading1);
+      expect(blocks[1].type, BlockType.heading2);
+      expect(blocks[2].type, BlockType.paragraph);
+    });
+
+    test('AI prompts include source, target and outline markers', () {
+      final translation = translationPrompt(
+        text: 'Hello',
+        sourceLanguage: 'English',
+        targetLanguage: 'Urdu',
+        urduDigits: true,
+      );
+      expect(translation, contains('English'));
+      expect(translation, contains('Urdu'));
+      expect(translation, contains(' Urdu digits'));
+      final outline = outlinePrompt(topic: 'Poetry', language: 'Urdu');
+      expect(outline, contains('H1:'));
+      expect(outline, contains('H2:'));
     });
 
     test('every registered exporter returns bytes', () async {

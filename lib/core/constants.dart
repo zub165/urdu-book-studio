@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class LanguageOption {
   final String code;
   final String name;
@@ -19,9 +21,44 @@ const List<LanguageOption> kLanguages = [
   LanguageOption('es', 'Spanish'),
 ];
 
+const List<LanguageOption> kTranslationLanguages = [
+  LanguageOption('en', 'English'),
+  LanguageOption('ur', 'Urdu'),
+  LanguageOption('ar', 'Arabic'),
+  LanguageOption('fa', 'Persian'),
+  LanguageOption('ps', 'Pashto'),
+  LanguageOption('sd', 'Sindhi'),
+  LanguageOption('hi', 'Hindi'),
+  LanguageOption('pa', 'Punjabi'),
+  LanguageOption('he', 'Hebrew'),
+  LanguageOption('fr', 'French'),
+  LanguageOption('es', 'Spanish'),
+  LanguageOption('de', 'German'),
+];
+
 String languageName(String code) => kLanguages
     .firstWhere((l) => l.code == code, orElse: () => LanguageOption(code, code))
     .name;
+
+String translationLanguageName(String code) => kTranslationLanguages
+    .firstWhere((l) => l.code == code, orElse: () => LanguageOption(code, code))
+    .name;
+
+const List<int> kLanguagePalette = [
+  0xFF0F766E,
+  0xFF7E22CE,
+  0xFFB45309,
+  0xFF1D4ED8,
+  0xFFBE185D,
+  0xFF15803D,
+  0xFFC2410C,
+  0xFF4338CA,
+];
+
+Color languageColor(String code) {
+  final sum = code.codeUnits.fold<int>(0, (total, unit) => total + unit);
+  return Color(kLanguagePalette[sum % kLanguagePalette.length]);
+}
 
 /// Fonts available in the editor. The first two are bundled in assets/fonts.
 const List<String> kFonts = [

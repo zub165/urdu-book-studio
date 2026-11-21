@@ -17,7 +17,14 @@ class UrduBookStudioApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF0F766E),
+        brightness: Brightness.light,
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: const Color(0xFF0F766E),
+        brightness: Brightness.dark,
+      ),
+      themeMode: ThemeMode.system,
       home: const LibraryScreen(),
     );
   }

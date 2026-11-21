@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../editor/chapter_editor.dart';
 import '../export/exporter.dart';
 import '../models/book.dart';
+import '../storage/book_importer.dart';
+import 'book_preview.dart';
 
 class BookScreen extends StatefulWidget {
   final Book book;
@@ -16,6 +18,8 @@ class BookScreen extends StatefulWidget {
 }
 
 class _BookScreenState extends State<BookScreen> {
+  bool _preview = false;
+
   Book get book => widget.book;
 
   void _save() {
@@ -61,13 +65,37 @@ class _BookScreenState extends State<BookScreen> {
   }
 
   void _openChapter(Chapter chapter) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => ChapterEditor(
-        book: book,
-        chapter: chapter,
-        onChanged: _save,
-      ),
-    ));
+    Navigator.of(context)
+        .push(MaterialPageRoute(
+          builder: (_) => ChapterEditor(
+            book: book,
+            chapter: chapter,
+            onChanged: _save,
+          ),
+        ))
+        .then((_) => mounted ? setState(() {}) : null);
+  }
+
+  Future<void> _importIntoBook() async {
+    final result = await FilePicker.platform.pickFiles(withData: true);
+    if (result == null || result.files.isEmpty) return;
+    final file = result.files.single;
+    if (file.bytes == null) return;
+    try {
+      final imported = await BookImporter(languageCode: book.languageCode)
+          .import(file.bytes!, file.name);
+      book.chapters.addAll(imported.chapters);
+      _changed();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Imported ${imported.chapters.length} chapters')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
+    }
   }
 
   Future<void> _export(BookExporter exporter) async {
@@ -118,6 +146,16 @@ class _BookScreenState extends State<BookScreen> {
         title: Text(book.title.isEmpty ? 'Untitled book' : book.title),
         actions: [
           IconButton(
+            tooltip: _preview ? 'Back to chapters' : 'Preview book',
+            icon: Icon(_preview ? Icons.edit_note : Icons.visibility),
+            onPressed: () => setState(() => _preview = !_preview),
+          ),
+          IconButton(
+            tooltip: 'Import file into this book',
+            icon: const Icon(Icons.file_upload_outlined),
+            onPressed: _importIntoBook,
+          ),
+          IconButton(
             tooltip: 'Kindle (KPF) guide',
             icon: const Icon(Icons.menu_book_outlined),
             onPressed: _showKpfGuide,
@@ -133,7 +171,9 @@ class _BookScreenState extends State<BookScreen> {
           ),
         ],
       ),
-      body: Directionality(
+      body: _preview
+          ? BookPreview(book: book)
+          : Directionality(
         textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
         child: Column(
           children: [

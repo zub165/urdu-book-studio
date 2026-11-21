@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../book/book_preview.dart';
 import '../models/book.dart';
+import '../services/ai_service.dart';
+import 'ai_dialogs.dart';
 import 'font_toolbar.dart';
 
 class _ReplaceRequest {
@@ -32,8 +35,18 @@ class ChapterEditor extends StatefulWidget {
 class _ChapterEditorState extends State<ChapterEditor> {
   int? _activeIndex;
   int _revision = 0;
+  bool _showPreview = false;
+  AiSettings _aiSettings = const AiSettings();
   final List<List<Map<String, dynamic>>> _undo = [];
   final List<List<Map<String, dynamic>>> _redo = [];
+
+  @override
+  void initState() {
+    super.initState();
+    AiSettingsStore().load().then((settings) {
+      if (mounted) setState(() => _aiSettings = settings);
+    });
+  }
 
   Block? get _active {
     final i = _activeIndex;
@@ -108,6 +121,46 @@ class _ChapterEditorState extends State<ChapterEditor> {
     _touch();
   }
 
+  void _insertBlocks(List<Block> blocks) {
+    _record();
+    widget.chapter.blocks.addAll(blocks);
+    _revision++;
+    _touch();
+  }
+
+  Future<void> _openAiSettings() async {
+    final updated = await showDialog<AiSettings>(
+      context: context,
+      builder: (_) => AiSettingsDialog(settings: _aiSettings),
+    );
+    if (updated == null) return;
+    await AiSettingsStore().save(updated);
+    if (!mounted) return;
+    setState(() => _aiSettings = updated);
+  }
+
+  Future<void> _aiTranslate() async {
+    final result = await showDialog<AiInsertResult>(
+      context: context,
+      builder: (_) => TranslateDialog(
+        settings: _aiSettings,
+        bookLanguage: widget.book.languageCode,
+      ),
+    );
+    if (result != null && mounted) _insertBlocks(result.blocks);
+  }
+
+  Future<void> _aiOutline() async {
+    final result = await showDialog<AiInsertResult>(
+      context: context,
+      builder: (_) => OutlineDialog(
+        settings: _aiSettings,
+        languageCode: widget.book.languageCode,
+      ),
+    );
+    if (result != null && mounted) _insertBlocks(result.blocks);
+  }
+
   Future<void> _findAndReplace() async {
     final request = await showDialog<_ReplaceRequest>(
       context: context,
@@ -153,6 +206,11 @@ class _ChapterEditorState extends State<ChapterEditor> {
         ),
         actions: [
           IconButton(
+            tooltip: _showPreview ? 'Back to editing' : 'Preview chapter',
+            icon: Icon(_showPreview ? Icons.edit_note : Icons.visibility),
+            onPressed: () => setState(() => _showPreview = !_showPreview),
+          ),
+          IconButton(
             tooltip: 'Undo',
             icon: const Icon(Icons.undo),
             onPressed: _undo.isNotEmpty ? _undoChange : null,
@@ -161,6 +219,20 @@ class _ChapterEditorState extends State<ChapterEditor> {
             tooltip: 'Redo',
             icon: const Icon(Icons.redo),
             onPressed: _redo.isNotEmpty ? _redoChange : null,
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'AI tools',
+            icon: const Icon(Icons.auto_awesome),
+            onSelected: (value) {
+              if (value == 'translate') _aiTranslate();
+              if (value == 'outline') _aiOutline();
+              if (value == 'settings') _openAiSettings();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'translate', child: Text('Translate text')),
+              PopupMenuItem(value: 'outline', child: Text('Generate heading outline')),
+              PopupMenuItem(value: 'settings', child: Text('AI settings')),
+            ],
           ),
           IconButton(
             tooltip: 'Find and replace',
@@ -186,7 +258,9 @@ class _ChapterEditorState extends State<ChapterEditor> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: blocks.isEmpty
+            child: _showPreview
+                ? ChapterPreview(chapter: widget.chapter, languageCode: lang)
+                : blocks.isEmpty
                 ? const Center(child: Text('Tap + to add a paragraph.'))
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),

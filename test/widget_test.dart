@@ -15,7 +15,10 @@ void main() {
     await tester.pumpWidget(const UrduBookStudioApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('No books yet. Tap "New book" to start.'), findsOneWidget);
+    expect(
+      find.text('No books yet. Tap "New book" or import a file.'),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.add), findsWidgets);
   });
 }

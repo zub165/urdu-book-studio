@@ -16,9 +16,14 @@ Live web app: https://zub165.github.io/urdu-book-studio/
 - font controls: bundled Urdu fonts, size, line height, letter spacing, color,
   bold, italic and underline
 - editor utilities: undo/redo, find and replace, word and character counts
+- AI translation (English to Urdu and 11 other languages) and AI heading outlines,
+  with template, font, size and color controls before inserting into the chapter
+  (add your Gemini or OpenAI key under the editor's AI menu)
+- live book preview while writing and in the book view; colorful language-coded library
 - book metadata, chapters with add/rename/delete/reorder, and heading-based TOC in exports
 - local JSON storage that works on web, Android and desktop
-- exports: DOCX, DOC (HTML-based), RTF, EPUB 3, HTML, TXT and Markdown
+- import book files (JSON, TXT, MD, DOCX, RTF) into the library or an open book
+- exports: DOCX, DOC (HTML-based), PDF, RTF, EPUB 3, HTML, TXT, Markdown and editable JSON
 
 ## Setup
 
@@ -55,7 +60,17 @@ variable TTFs under the SIL Open Font License; licence texts are included).
 | HTML | Implemented | Single page, RTL when the book is Urdu |
 | TXT | Implemented | UTF-8 with BOM for Notepad |
 | Markdown | Implemented | RTL blocks wrapped in `<div dir="rtl">` |
+| JSON | Implemented | Full-fidelity editable book file; import it back to keep all styles |
 | KPF | Not generated | Amazon proprietary. Export EPUB, then use Kindle Create or KDP |
+
+## Import formats
+
+| Format | Notes |
+|---|---|
+| JSON | Restores chapters, blocks and styles; gets a new book id on import |
+| TXT / Markdown | Paragraphs and headings become editable blocks |
+| DOCX | Paragraphs and Heading 1-3 styles are read from `word/document.xml` |
+| RTF | Basic text and paragraph import; complex formatting is ignored |
 
 ## Deployment
 
@@ -65,7 +80,19 @@ it after changes:
 ```bash
 flutter test
 flutter build web --release --base-href /urdu-book-studio/
-git subtree push --prefix build/web origin gh-pages
+```
+
+Because `build/` is gitignored, copy `build/web` into a temporary clone of the
+`gh-pages` branch and push from there:
+
+```bash
+git fetch origin gh-pages
+git worktree add /tmp/urdu-book-studio-pages origin/gh-pages
+cp -R build/web/. /tmp/urdu-book-studio-pages/
+git -C /tmp/urdu-book-studio-pages add --all
+git -C /tmp/urdu-book-studio-pages commit -m "Deploy web app"
+git -C /tmp/urdu-book-studio-pages push origin HEAD:gh-pages
+git worktree remove /tmp/urdu-book-studio-pages
 ```
 
 GitHub Pages must be set to deploy from `gh-pages / (root)`.
@@ -77,4 +104,4 @@ GitHub Pages must be set to deploy from `gh-pages / (root)`.
 - The library is one JSON document in shared preferences; large libraries should
   move to one file per book.
 - UI strings are English; localization is a later milestone.
-- Import (milestone 6) is not implemented yet.
+- AI translation requires a Gemini or OpenAI API key; requests are sent directly from the browser to the provider.
