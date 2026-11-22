@@ -207,8 +207,11 @@ class _ChapterEditorState extends State<ChapterEditor>
 
   void _deleteBlock(int index) {
     _record();
-    _chapter.blocks.removeAt(index);
-    _activeIndex = null;
+    final removed = _chapter.blocks.removeAt(index);
+    _controllers.remove(removed.id)?.dispose();
+    _selected.removeWhere((i) => i == index);
+    _selected.clear(); // keep simple after structural change
+    _activeIndex = _chapter.blocks.isEmpty ? null : (index > 0 ? index - 1 : 0);
     _touch();
   }
 
@@ -513,7 +516,7 @@ class _ChapterEditorState extends State<ChapterEditor>
                     onBeforeChange: _record,
                     onChanged: _touch,
                     onDelete: () => _deleteBlock(i),
-                    onJoinPrevious: i == 0 ? null : () { _record(); _chapter.blocks[i - 1].text = '${_chapter.blocks[i - 1].text}\n${blocks[i].text}'.trim(); _chapter.blocks.removeAt(i); _activeIndex = i - 1; _touch(); },
+                    onJoinPrevious: i == 0 ? null : () { _record(); _chapter.blocks[i - 1].text = '${_chapter.blocks[i - 1].text}\n${blocks[i].text}'.trim(); final removed=_chapter.blocks.removeAt(i); _controllers.remove(removed.id)?.dispose(); _activeIndex = i - 1; _touch(); },
                   ),
                 )),
             if (_showUrduKeyboard) _buildUrduKeyboard(),
@@ -625,7 +628,8 @@ class _ChapterEditorState extends State<ChapterEditor>
           }
           if (event.logicalKey == LogicalKeyboardKey.backspace && block.text.isEmpty && index > 0) {
             _record();
-            _chapter.blocks.removeAt(index);
+            final removed = _chapter.blocks.removeAt(index);
+            _controllers.remove(removed.id)?.dispose();
             _activeIndex = index - 1;
             _touch();
             return KeyEventResult.handled;

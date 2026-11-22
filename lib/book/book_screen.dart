@@ -101,6 +101,7 @@ class _BookScreenState extends State<BookScreen> with SingleTickerProviderStateM
   }
 
   void _deleteChapter(List<Chapter> target, Chapter chapter) {
+    if (target.length <= 1 && identical(target, book.chapters)) return;
     target.remove(chapter);
     if (book.chapters.isEmpty) {
       book.chapters.add(Chapter(title: 'Chapter 1', blocks: [Block(style: defaultStyleFor(book.languageCode))]));
@@ -215,10 +216,12 @@ class _BookScreenState extends State<BookScreen> with SingleTickerProviderStateM
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: book.languageCode,
-          decoration: const InputDecoration(labelText: 'Writing language'),
+          decoration: const InputDecoration(labelText: 'Book language / writing language'),
           items: [for (final l in kLanguages) DropdownMenuItem(value: l.code, child: Text(l.name))],
           onChanged: (v) { if (v == null) return; book.languageCode = v; _changed(); },
         ),
+        const SizedBox(height: 8),
+        Text(book.isRtl ? 'Default direction: Right to left (RTL)' : 'Default direction: Left to right (LTR)', style: Theme.of(context).textTheme.bodySmall),
       ])),
       _sectionCard('Actions', Wrap(spacing: 8, runSpacing: 8, children: [
         FilledButton.icon(onPressed: _importIntoBook, icon: const Icon(Icons.file_upload_outlined), label: const Text('Import manuscript')),
