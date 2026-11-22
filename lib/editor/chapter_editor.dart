@@ -322,6 +322,13 @@ class _ChapterEditorState extends State<ChapterEditor>
             icon: const Icon(Icons.redo),
             onPressed: _redo.isNotEmpty ? _redoChange : null,
           ),
+          IconButton(tooltip: 'Save now', icon: const Icon(Icons.save_outlined), onPressed: () { widget.onChanged(); setState(()=>_saveStatus='Saved'); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved'))); }),
+          PopupMenuButton<BlockType>(
+            tooltip: 'Set block type / heading',
+            icon: const Icon(Icons.title),
+            onSelected: (t) { _record(); for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { b.type = t; } _touch(); },
+            itemBuilder: (_) => [for (final t in BlockType.values) PopupMenuItem(value: t, child: Text(t.label))],
+          ),
           IconButton(
             tooltip: _continuousView ? 'Block edit view' : 'Continuous writing view',
             icon: Icon(_continuousView ? Icons.view_agenda_outlined : Icons.article_outlined),

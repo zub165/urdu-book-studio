@@ -25,6 +25,9 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
   late TextEditingController _key;
   late TextEditingController _model;
   late TextEditingController _backendUrl;
+  bool _testing = false;
+  String? _testResult;
+  bool _testOk = false;
 
   @override
   void initState() {
@@ -76,9 +79,33 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
                 controller: _backendUrl,
                 decoration: const InputDecoration(
                   labelText: 'Backend URL',
-                  helperText: 'GoDaddy ML endpoint, e.g. https://example.com/api/generate',
+                  helperText: 'HTTPS endpoint required for web (CORS enabled). e.g. https://example.com/api/chat',
                 ),
               ),
+            if (_provider == AiProvider.backend) const SizedBox(height: 8),
+            if (_provider == AiProvider.backend)
+              Row(children: [
+                OutlinedButton.icon(
+                  onPressed: _testing ? null : () async {
+                    final settings = AiSettings(provider: _provider, apiKey: _key.text.trim(), model: _model.text.trim().isEmpty ? _provider.defaultModel : _model.text.trim(), backendUrl: _backendUrl.text.trim());
+                    setState(() { _testing = true; _testResult = null; });
+                    try {
+                      final text = await AiService().generate('Reply with the word OK only.', settings);
+                      if (!mounted) return;
+                      setState(() { _testOk = true; _testResult = 'Connected: ${text.trim()}'; });
+                    } catch (e) {
+                      if (!mounted) return;
+                      setState(() { _testOk = false; _testResult = 'Failed: $e'; });
+                    } finally {
+                      if (mounted) setState(() => _testing = false);
+                    }
+                  },
+                  icon: _testing ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.wifi_tethering),
+                  label: const Text('Test connection'),
+                ),
+              ]),
+            if (_testResult != null)
+              Padding(padding: const EdgeInsets.only(top: 8), child: Text(_testResult!, style: TextStyle(color: _testOk ? Colors.green : Theme.of(context).colorScheme.error))),
             if (_provider == AiProvider.backend) const SizedBox(height: 8),
             TextField(
               controller: _key,
