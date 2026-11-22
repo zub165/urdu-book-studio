@@ -313,15 +313,16 @@ class _ChapterEditorState extends State<ChapterEditor>
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        title: InkWell(
+          onTap: () async {
+            final c = TextEditingController(text: _chapter.title);
+            final next = await showDialog<String>(context: context, builder: (ctx)=>AlertDialog(title: const Text('Rename chapter'), content: TextField(controller: c, autofocus: true), actions:[TextButton(onPressed: ()=>Navigator.pop(ctx), child: const Text('Cancel')), FilledButton(onPressed: ()=>Navigator.pop(ctx,c.text.trim()), child: const Text('Save'))]));
+            if (next != null && next.isNotEmpty) { setState(()=>_chapter.title = next); widget.onChanged(); }
+          },
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(_chapter.title),
-            Text(
-              '$_wordCount words · $_characterCount characters · $_saveStatus',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+            Text('$_wordCount words · $_characterCount characters · $_saveStatus', style: Theme.of(context).textTheme.bodySmall),
+          ]),
         ),
             actions: [
           IconButton(
@@ -381,6 +382,12 @@ class _ChapterEditorState extends State<ChapterEditor>
             icon: const Icon(Icons.more_vert),
             onSelected: (v) async {
               if (v == 'save') { widget.onChanged(); setState(()=>_saveStatus='Saved'); return; }
+              if (v == 'rename') {
+                final c = TextEditingController(text: _chapter.title);
+                final next = await showDialog<String>(context: context, builder: (ctx)=>AlertDialog(title: const Text('Rename chapter'), content: TextField(controller: c, autofocus: true, decoration: const InputDecoration(labelText: 'Chapter name')), actions:[TextButton(onPressed: ()=>Navigator.pop(ctx), child: const Text('Cancel')), FilledButton(onPressed: ()=>Navigator.pop(ctx,c.text.trim()), child: const Text('Save'))]));
+                if (next != null && next.isNotEmpty) { setState(()=>_chapter.title = next); widget.onChanged(); }
+                return;
+              }
               if (v == 'copy') {
                 final text = _chapter.blocks.map((b)=>b.text).join('\n\n');
                 await Clipboard.setData(ClipboardData(text: text));
@@ -409,6 +416,7 @@ class _ChapterEditorState extends State<ChapterEditor>
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'save', child: Text('Save now')),
+              const PopupMenuItem(value: 'rename', child: Text('Rename chapter')),
               const PopupMenuItem(value: 'copy', child: Text('Copy whole chapter')),
               const PopupMenuItem(value: 'paste', child: Text('Paste/replace whole chapter')),
               const PopupMenuItem(value: 'editall', child: Text('Edit whole chapter text')),
