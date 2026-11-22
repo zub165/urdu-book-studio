@@ -12,7 +12,7 @@ Status legend: `[x]` done, `[~]` partial, `[ ]` pending.
 
 ## 1. Reported bugs / urgent
 - [ ] **ML Backend / GoDaddy AI not working when selected**: debug end-to-end. Verify AI settings save/load, provider persists, backend URL validation, web CORS/HTTPS/mixed-content, auth token header, response parsing for multi-model `/api/chat` (`reply`) and Ollama `/api/generate`/`/api/chat`, timeout/UI errors. Add in-app "Test connection" and clearer failure reason. Confirm public HTTPS+CORS endpoint for GitHub Pages.
-- [ ] **Urdu vowel input / on-screen keyboard**: physical `P`/OS mapping may not produce expected Urdu vowels. Add side Urdu keyboard/character palette in editor; tap-to-insert vowels/common chars at cursor; support Urdu/Arabic script layouts.
+- [~] **Urdu vowel input / on-screen keyboard**: added editor toolbar toggle and on-screen Urdu character/vowel palette with cursor insert/backspace (`lib/editor/chapter_editor.dart`); still needs full phonetic mapping, OS IME guidance, and richer layout.
 - [ ] **Isolated character paragraph breaks** (e.g., single `ر` on its own line): add review/repair flow - compare with surrounding text, Join with previous/next, Undo. Detect suspicious one-character/very-short blocks; optional auto-suggest merge (never auto-destructive without confirmation).
 - [ ] **Chapter names in sidebar**: show book title once at top; list chapters by number + own title. Unnamed/same-as-book-title chapters show `باب 1` / `Chapter 1`. Allow rename directly in list; clearly highlight open chapter; verify names come from Book Details/chapter metadata, not repeated book title.
 - [ ] **Sidebar faint en-US / book language badge**: show readable book language badge (e.g., `اردو`), not faint `en-US`. Separate App language and Book language clearly everywhere.
@@ -31,7 +31,7 @@ Status legend: `[x]` done, `[~]` partial, `[ ]` pending.
 - [ ] **Preview controls**: draggable divider, Fit page/Fit width, zoom, full-page preview; Edit/Preview switch on small screens; follow edited paragraph in preview.
 - [ ] **Formatting controls clarity**: Line spacing/Paragraph spacing labels done; add units/editable numeric inputs, first-line indent, paragraph alignment, page size/margins in Layout/Format.
 - [~] **Continuous writing**: default continuous manuscript page done; optional Block edit view kept. Remove remaining block-chrome clutter; one paragraph-spacing control in top toolbar/Format.
-- [x] **Save status**: Saving…/Saved shown in editor title; autosave on change.
+- [x] **Save status / editability**: fixed continuous/block editor to use persistent TextEditingControllers so Write view is editable; Saving…/Saved shown; Save now button added.
 - [ ] **Undo/redo robustness**: verify across continuous view, join/split, formatting, block type changes; add visible toolbar buttons if needed.
 
 ## 4. Library & book management
