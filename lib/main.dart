@@ -55,32 +55,25 @@ class UrduBookStudioApp extends StatelessWidget {
         builder: (context, _) {
           final settings = controller.settings;
           final seed = Color(settings.themeColor.color);
-          return MaterialApp(
-            title: 'Urdu Book Studio',
-            debugShowCheckedModeBanner: false,
-            locale: settings.locale,
-            supportedLocales: [
-              for (final code in AppStrings.supported) Locale(code),
-            ],
-            localizationsDelegates: const [
-              AppStringsDelegate(),
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            theme: ThemeData(
-              useMaterial3: true,
-              colorSchemeSeed: seed,
-              brightness: Brightness.light,
-            ),
-            darkTheme: ThemeData(
-              useMaterial3: true,
-              colorSchemeSeed: seed,
-              brightness: Brightness.dark,
-            ),
-            themeMode: settings.flutterThemeMode,
-            home: const LibraryScreen(),
-          );
+            final systemBrightness = MediaQuery.platformBrightnessOf(context);
+            return MaterialApp(
+              title: 'Book Writer & Publisher',
+              debugShowCheckedModeBanner: false,
+              locale: settings.locale,
+              supportedLocales: [for (final code in AppStrings.supported) Locale(code)],
+              localizationsDelegates: const [
+                AppStringsDelegate(),
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              theme: settings.themeData(systemBrightness),
+              darkTheme: settings.themeMode == AppThemeMode.system
+                  ? ThemeData(useMaterial3: true, colorSchemeSeed: seed, brightness: Brightness.dark)
+                  : settings.themeData(systemBrightness),
+              themeMode: settings.themeMode == AppThemeMode.sepia ? ThemeMode.light : settings.flutterThemeMode,
+              home: const LibraryScreen(),
+            );
         },
       ),
     );

@@ -28,8 +28,9 @@ Widget previewBlock(
   final color = style.color == 0xFF000000 && defaultColor != null
       ? defaultColor
       : resolvedTextColor(context, style.color);
+  final spacing = block.paragraphSpacing;
   return Padding(
-    padding: EdgeInsets.symmetric(vertical: heading ? 10 : 7),
+    padding: EdgeInsets.only(top: heading ? spacing + 4 : spacing / 2, bottom: heading ? spacing : spacing / 2),
     child: Text(
       block.text.isEmpty ? ' ' : block.text,
       textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,

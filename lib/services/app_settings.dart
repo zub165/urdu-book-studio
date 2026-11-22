@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum AppThemeMode { system, light, dark }
+enum AppThemeMode { system, light, dark, sepia }
 
 enum AppThemeColor {
   teal('Teal', 0xFF0F766E),
@@ -59,7 +59,32 @@ class AppSettings {
         AppThemeMode.system => ThemeMode.system,
         AppThemeMode.light => ThemeMode.light,
         AppThemeMode.dark => ThemeMode.dark,
+        AppThemeMode.sepia => ThemeMode.light,
       };
+
+  ThemeData themeData(Brightness systemBrightness) {
+    final seed = Color(themeColor.color);
+    if (themeMode == AppThemeMode.sepia) {
+      final base = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light);
+      return ThemeData(
+        useMaterial3: true,
+        colorScheme: base.copyWith(
+          surface: const Color(0xFFFDF6E3),
+          onSurface: const Color(0xFF3F2F1B),
+          primary: const Color(0xFF92400E),
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF1E4C8),
+        cardColor: const Color(0xFFFDF6E3),
+      );
+    }
+    final brightness = switch (themeMode) {
+      AppThemeMode.system => systemBrightness,
+      AppThemeMode.light => Brightness.light,
+      AppThemeMode.dark => Brightness.dark,
+      AppThemeMode.sepia => Brightness.light,
+    };
+    return ThemeData(useMaterial3: true, colorSchemeSeed: seed, brightness: brightness);
+  }
 
   Locale get locale => Locale(localeCode);
 

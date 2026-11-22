@@ -22,6 +22,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final _search = TextEditingController();
   List<Book> _books = [];
   bool _loading = true;
+  String _sort = 'recent';
+  String _languageFilter = 'all';
+  Book? _lastDeleted;
+  int _lastDeletedIndex = -1;
 
   @override
   void initState() {
@@ -93,25 +97,54 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _delete(Book book) async {
     final s = AppStrings.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(s.deleteBook),
-        content: Text('"${book.title}" will be removed from this device.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(s.delete),
-          ),
-        ],
-      ),
-    );
+    final idx = _books.indexOf(book);
+    setState(() {
+      _books.remove(book);
+      _lastDeleted = book;
+      _lastDeletedIndex = idx;
+    });
+    await _persist();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${s.moveToTrash}: "${book.title}"'),
+      action: SnackBarAction(label: s.undo, onPressed: () async {
+        final b = _lastDeleted;
+        if (b == null) return;
+        setState(() => _books.insert(_lastDeletedIndex.clamp(0, _books.length), b));
+        _lastDeleted = null;
+        await _persist();
+      }),
+    ));
+  }
+
+  Future<void> _duplicate(Book book) async {
+    final copy = Book.fromJson(book.toJson())
+      ..title = '${book.title} (Copy)';
+    setState(() => _books.insert(0, copy));
+    await _persist();
+  }
+
+  Future<void> _editDetails(Book book) async {
+    final s = AppStrings.of(context);
+    final title = TextEditingController(text: book.title);
+    final author = TextEditingController(text: book.author);
+    var lang = book.languageCode;
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
+      title: Text(s.editDetails),
+      content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: title, decoration: InputDecoration(labelText: s.title)),
+        const SizedBox(height: 8),
+        TextField(controller: author, decoration: InputDecoration(labelText: s.author)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(initialValue: lang, decoration: InputDecoration(labelText: s.language),
+          items: [for (final l in kLanguages) DropdownMenuItem(value: l.code, child: Text(l.name))],
+          onChanged: (v) { if (v != null) setD(() => lang = v); }),
+      ])),
+      actions: [TextButton(onPressed: ()=>Navigator.pop(ctx,false), child: Text(s.cancel)), FilledButton(onPressed: ()=>Navigator.pop(ctx,true), child: Text(s.ok))],
+    )));
     if (ok != true) return;
-    setState(() => _books.remove(book));
+    setState(() { book.title = title.text.trim(); book.author = author.text.trim(); book.languageCode = lang; book.updatedAt = DateTime.now(); });
     await _persist();
   }
 
@@ -127,26 +160,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final s = AppStrings.of(context);
     final query = _search.text.trim().toLowerCase();
     final visible = _books.where((book) {
+      if (_languageFilter != 'all' && book.languageCode != _languageFilter) return false;
       if (query.isEmpty) return true;
       return book.title.toLowerCase().contains(query) ||
           book.author.toLowerCase().contains(query) ||
           languageName(book.languageCode).toLowerCase().contains(query);
     }).toList();
+    visible.sort((a,b) {
+      switch (_sort) {
+        case 'title': return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        case 'author': return a.author.toLowerCase().compareTo(b.author.toLowerCase());
+        case 'language': return a.languageCode.compareTo(b.languageCode);
+        default: return b.updatedAt.compareTo(a.updatedAt);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
         title: Text(s.appName),
         actions: [
-          IconButton(
-            tooltip: s.importFile,
-            icon: const Icon(Icons.file_upload_outlined),
-            onPressed: _importBook,
-          ),
-          IconButton(
-            tooltip: s.settings,
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: _openSettings,
-          ),
+          FilledButton.icon(onPressed: _createBook, icon: const Icon(Icons.add), label: Text(s.newBook)),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(onPressed: _importBook, icon: const Icon(Icons.file_upload_outlined), label: Text(s.importFile)),
+          IconButton(tooltip: s.settings, icon: const Icon(Icons.settings_outlined), onPressed: _openSettings),
+          const SizedBox(width: 8),
         ],
       ),
       body: Container(
@@ -164,19 +201,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: TextField(
-                controller: _search,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  hintText: s.searchHint,
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
+              child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                SizedBox(width: 360, child: TextField(controller: _search, onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(hintText: s.searchHint, prefixIcon: const Icon(Icons.search), filled: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)))),
+                DropdownButton<String>(value: _sort, onChanged: (v)=>setState(()=>_sort=v ?? 'recent'), items: [
+                  DropdownMenuItem(value: 'recent', child: Text(s.recentlyEdited)),
+                  DropdownMenuItem(value: 'title', child: Text(s.sortTitle)),
+                  DropdownMenuItem(value: 'author', child: Text(s.sortAuthor)),
+                  DropdownMenuItem(value: 'language', child: Text(s.sortLanguage)),
+                ]),
+                DropdownButton<String>(value: _languageFilter, onChanged: (v)=>setState(()=>_languageFilter=v ?? 'all'), items: [
+                  DropdownMenuItem(value: 'all', child: Text(s.allLanguages)),
+                  for (final l in kLanguages) DropdownMenuItem(value: l.code, child: Text(l.name)),
+                ]),
+              ]),
             ),
             Expanded(
               child: _loading
@@ -231,31 +270,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   ),
                                   subtitle: Padding(
                                     padding: const EdgeInsets.only(top: 6),
-                                    child: Wrap(
-                                      spacing: 8,
-                                      crossAxisAlignment: WrapCrossAlignment.center,
-                                      children: [
-                                        Chip(
-                                          label: Text(
-                                            languageName(book.languageCode),
-                                            style: const TextStyle(fontSize: 11),
-                                          ),
-                                          visualDensity: VisualDensity.compact,
-                                        ),
-                                        Text('${book.chapters.length} ${s.chapters}'),
-                                        Text(
-                                          book.updatedAt
-                                              .toIso8601String()
-                                              .substring(0, 10),
-                                        ),
-                                      ],
-                                    ),
+                                    child: Wrap(spacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                                      Chip(label: Text(languageName(book.languageCode), style: const TextStyle(fontSize: 11)), visualDensity: VisualDensity.compact),
+                                      Text('${book.chapters.length} ${s.chapters}'),
+                                      Text('${s.lastEdited} ${MaterialLocalizations.of(context).formatMediumDate(book.updatedAt)}'),
+                                    ]),
                                   ),
                                   onTap: () => _open(book),
-                                  trailing: IconButton(
-                                    tooltip: s.delete,
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => _delete(book),
+                                  trailing: PopupMenuButton<String>(
+                                    onSelected: (v) {
+                                      if (v == 'open') _open(book);
+                                      if (v == 'edit') _editDetails(book);
+                                      if (v == 'dup') _duplicate(book);
+                                      if (v == 'del') _delete(book);
+                                    },
+                                    itemBuilder: (_) => [
+                                      PopupMenuItem(value: 'open', child: Text(s.open)),
+                                      PopupMenuItem(value: 'edit', child: Text(s.editDetails)),
+                                      PopupMenuItem(value: 'dup', child: Text(s.duplicate)),
+                                      PopupMenuItem(value: 'del', child: Text(s.moveToTrash)),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -266,11 +300,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createBook,
-        icon: const Icon(Icons.add),
-        label: Text(s.newBook),
-      ),
+      floatingActionButton: MediaQuery.sizeOf(context).width < 700
+          ? FloatingActionButton(onPressed: _createBook, tooltip: s.newBook, child: const Icon(Icons.add))
+          : null,
     );
   }
 }
@@ -418,6 +450,7 @@ class _AppSettingsDialog extends StatelessWidget {
                   DropdownMenuItem(value: AppThemeMode.system, child: Text(s.system)),
                   DropdownMenuItem(value: AppThemeMode.light, child: Text(s.light)),
                   DropdownMenuItem(value: AppThemeMode.dark, child: Text(s.dark)),
+                  DropdownMenuItem(value: AppThemeMode.sepia, child: Text(s.sepia)),
                 ],
                 onChanged: (v) {
                   if (v != null) controller.update(settings.copyWith(themeMode: v));

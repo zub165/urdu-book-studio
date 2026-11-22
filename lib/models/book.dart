@@ -93,6 +93,7 @@ class Block {
   BlockType type;
   String text;
   bool? rtl; // null = follow the book's language
+  double paragraphSpacing; // points before/after spacing in preview/export
   TextStyleData style;
 
   Block({
@@ -100,6 +101,7 @@ class Block {
     this.type = BlockType.paragraph,
     this.text = '',
     this.rtl,
+    this.paragraphSpacing = 8,
     TextStyleData? style,
   })  : id = id ?? const Uuid().v4(),
         style = style ?? const TextStyleData();
@@ -107,11 +109,7 @@ class Block {
   bool resolvedRtl(String languageCode) => rtl ?? isRtlLanguage(languageCode);
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'type': type.name,
-        'text': text,
-        'rtl': rtl,
-        'style': style.toJson(),
+        'id': id, 'type': type.name, 'text': text, 'rtl': rtl, 'paragraphSpacing': paragraphSpacing, 'style': style.toJson(),
       };
 
   factory Block.fromJson(Map<String, dynamic> j) => Block(
@@ -119,8 +117,8 @@ class Block {
         type: BlockType.values.byName(j['type'] as String? ?? 'paragraph'),
         text: j['text'] as String? ?? '',
         rtl: j['rtl'] as bool?,
-        style: TextStyleData.fromJson(
-            (j['style'] as Map<String, dynamic>?) ?? const {}),
+        paragraphSpacing: (j['paragraphSpacing'] as num?)?.toDouble() ?? 8,
+        style: TextStyleData.fromJson((j['style'] as Map<String, dynamic>?) ?? const {}),
       );
 }
 

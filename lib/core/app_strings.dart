@@ -41,6 +41,26 @@ class AppStrings {
   String get system => _t('system');
   String get light => _t('light');
   String get dark => _t('dark');
+  String get sepia => _t('sepia');
+  String get lastEdited => _t('lastEdited');
+  String get open => _t('open');
+  String get editDetails => _t('editDetails');
+  String get duplicate => _t('duplicate');
+  String get export => _t('export');
+  String get moveToTrash => _t('moveToTrash');
+  String get undo => _t('undo');
+  String get restored => _t('restored');
+  String get sortBy => _t('sortBy');
+  String get recentlyEdited => _t('recentlyEdited');
+  String get sortTitle => _t('sortTitle');
+  String get sortAuthor => _t('sortAuthor');
+  String get sortLanguage => _t('sortLanguage');
+  String get allLanguages => _t('allLanguages');
+  String get lineSpacing => _t('lineSpacing');
+  String get paragraphSpacing => _t('paragraphSpacing');
+  String get saving => _t('saving');
+  String get saved => _t('saved');
+  String get saveFailed => _t('saveFailed');
   String get bookTemplate => _t('bookTemplate');
   String get applyToAll => _t('applyToAll');
   String get selectBlocks => _t('selectBlocks');
@@ -57,7 +77,7 @@ class AppStrings {
 
   static const Map<String, Map<String, String>> _values = {
     'en': {
-      'appName': 'Urdu Book Studio',
+      'appName': 'Book Writer & Publisher',
       'newBook': 'New book',
       'importFile': 'Import book file',
       'settings': 'Settings',
@@ -82,6 +102,26 @@ class AppStrings {
       'system': 'System',
       'light': 'Light',
       'dark': 'Dark',
+      'sepia': 'Sepia',
+      'lastEdited': 'Last edited',
+      'open': 'Open',
+      'editDetails': 'Edit details',
+      'duplicate': 'Duplicate',
+      'export': 'Export',
+      'moveToTrash': 'Move to Trash',
+      'undo': 'Undo',
+      'restored': 'Restored',
+      'sortBy': 'Sort by',
+      'recentlyEdited': 'Recently edited',
+      'sortTitle': 'Title',
+      'sortAuthor': 'Author',
+      'sortLanguage': 'Language',
+      'allLanguages': 'All languages',
+      'lineSpacing': 'Line spacing',
+      'paragraphSpacing': 'Paragraph spacing',
+      'saving': 'Saving…',
+      'saved': 'Saved',
+      'saveFailed': 'Save failed',
       'bookTemplate': 'Book template',
       'applyToAll': 'Apply to all blocks',
       'selectBlocks': 'Select blocks',
@@ -97,7 +137,7 @@ class AppStrings {
       'noBlocksSelected': 'Select blocks to apply font changes.',
     },
     'ur': {
-      'appName': 'اردو بک اسٹوڈیو',
+      'appName': 'کتاب لکھیں اور شائع کریں',
       'newBook': 'نئی کتاب',
       'importFile': 'کتاب فائل درآمد کریں',
       'settings': 'ترتیبات',
@@ -122,6 +162,26 @@ class AppStrings {
       'system': 'سسٹم',
       'light': 'ہلکا',
       'dark': 'گہرا',
+      'sepia': 'سیپیا',
+      'lastEdited': 'آخری ترمیم',
+      'open': 'کھولیں',
+      'editDetails': 'تفصیلات ترمیم کریں',
+      'duplicate': 'نقل بنائیں',
+      'export': 'برآمد کریں',
+      'moveToTrash': 'ردی میں منتقل کریں',
+      'undo': 'واپس',
+      'restored': 'بحال ہو گیا',
+      'sortBy': 'ترتیب',
+      'recentlyEdited': 'حال ہی میں ترمیم شدہ',
+      'sortTitle': 'عنوان',
+      'sortAuthor': 'مصنف',
+      'sortLanguage': 'زبان',
+      'allLanguages': 'تمام زبانیں',
+      'lineSpacing': 'سطری فاصلہ',
+      'paragraphSpacing': 'پیراگراف فاصلہ',
+      'saving': 'محفوظ ہو رہا ہے…',
+      'saved': 'محفوظ',
+      'saveFailed': 'محفوظ ناکام',
       'bookTemplate': 'کتاب کا سانچہ',
       'applyToAll': 'تمام بلاکس پر لگائیں',
       'selectBlocks': 'بلاکس منتخب کریں',
@@ -137,7 +197,7 @@ class AppStrings {
       'noBlocksSelected': 'فونٹ تبدیلی کے لیے بلاکس منتخب کریں۔',
     },
     'ar': {
-      'appName': 'استوديو الكتب الأردية',
+      'appName': 'كاتب وناشر الكتب',
       'newBook': 'كتاب جديد',
       'importFile': 'استيراد ملف كتاب',
       'settings': 'الإعدادات',
@@ -162,6 +222,26 @@ class AppStrings {
       'system': 'النظام',
       'light': 'فاتح',
       'dark': 'داكن',
+      'sepia': 'بني داكن',
+      'lastEdited': 'آخر تعديل',
+      'open': 'فتح',
+      'editDetails': 'تعديل التفاصيل',
+      'duplicate': 'تكرار',
+      'export': 'تصدير',
+      'moveToTrash': 'نقل إلى المهملات',
+      'undo': 'تراجع',
+      'restored': 'تمت الاستعادة',
+      'sortBy': 'ترتيب حسب',
+      'recentlyEdited': 'المحررة حديثًا',
+      'sortTitle': 'العنوان',
+      'sortAuthor': 'المؤلف',
+      'sortLanguage': 'اللغة',
+      'allLanguages': 'كل اللغات',
+      'lineSpacing': 'تباعد الأسطر',
+      'paragraphSpacing': 'تباعد الفقرات',
+      'saving': 'جارٍ الحفظ…',
+      'saved': 'تم الحفظ',
+      'saveFailed': 'فشل الحفظ',
       'bookTemplate': 'قالب الكتاب',
       'applyToAll': 'تطبيق على كل الكتل',
       'selectBlocks': 'تحديد الكتل',
@@ -177,7 +257,7 @@ class AppStrings {
       'noBlocksSelected': 'حدد الكتل لتطبيق تغييرات الخط.',
     },
     'hi': {
-      'appName': 'उर्दू बुक स्टूडियो',
+      'appName': 'बुक राइटर और पब्लिशर',
       'newBook': 'नई किताब',
       'importFile': 'किताब फ़ाइल आयात करें',
       'settings': 'सेटिंग्स',
@@ -202,6 +282,26 @@ class AppStrings {
       'system': 'सिस्टम',
       'light': 'हल्का',
       'dark': 'गहरा',
+      'sepia': 'सीपिया',
+      'lastEdited': 'अंतिम संपादन',
+      'open': 'खोलें',
+      'editDetails': 'विवरण संपादित करें',
+      'duplicate': 'डुप्लिकेट',
+      'export': 'निर्यात',
+      'moveToTrash': 'ट्रैश में भेजें',
+      'undo': 'पूर्ववत करें',
+      'restored': 'पुनर्स्थापित',
+      'sortBy': 'क्रम',
+      'recentlyEdited': 'हाल ही में संपादित',
+      'sortTitle': 'शीर्षक',
+      'sortAuthor': 'लेखक',
+      'sortLanguage': 'भाषा',
+      'allLanguages': 'सभी भाषाएँ',
+      'lineSpacing': 'पंक्ति अंतर',
+      'paragraphSpacing': 'पैराग्राफ अंतर',
+      'saving': 'सहेज रहा है…',
+      'saved': 'सहेजा गया',
+      'saveFailed': 'सहेजना विफल',
       'bookTemplate': 'किताब टेम्पलेट',
       'applyToAll': 'सभी ब्लॉकों पर लागू करें',
       'selectBlocks': 'ब्लॉक चुनें',
@@ -217,7 +317,7 @@ class AppStrings {
       'noBlocksSelected': 'फ़ॉन्ट बदलने के लिए ब्लॉक चुनें।',
     },
     'fa': {
-      'appName': 'استودیوی کتاب اردو',
+      'appName': 'کتاب‌نویس و ناشر',
       'newBook': 'کتاب جدید',
       'importFile': 'وارد کردن فایل کتاب',
       'settings': 'تنظیمات',
@@ -242,6 +342,26 @@ class AppStrings {
       'system': 'سیستم',
       'light': 'روشن',
       'dark': 'تیره',
+      'sepia': 'سپیا',
+      'lastEdited': 'آخرین ویرایش',
+      'open': 'باز کردن',
+      'editDetails': 'ویرایش جزئیات',
+      'duplicate': 'تکرار',
+      'export': 'برون‌ریزی',
+      'moveToTrash': 'انتقال به زباله‌دان',
+      'undo': 'واگرد',
+      'restored': 'بازیابی شد',
+      'sortBy': 'مرتب‌سازی',
+      'recentlyEdited': 'اخیراً ویرایش شده',
+      'sortTitle': 'عنوان',
+      'sortAuthor': 'نویسنده',
+      'sortLanguage': 'زبان',
+      'allLanguages': 'همه زبان‌ها',
+      'lineSpacing': 'فاصله خطوط',
+      'paragraphSpacing': 'فاصله پاراگراف',
+      'saving': 'در حال ذخیره…',
+      'saved': 'ذخیره شد',
+      'saveFailed': 'ذخیره نشد',
       'bookTemplate': 'قالب کتاب',
       'applyToAll': 'اعمال روی همه بلوک‌ها',
       'selectBlocks': 'انتخاب بلوک‌ها',

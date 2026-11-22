@@ -89,11 +89,10 @@ class FontToolbar extends StatelessWidget {
               for (final f in kFonts)
                 DropdownMenuItem(
                   value: f,
-                  child: Text(
-                    f,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontFamily: f),
-                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children:[
+                    Text(f, overflow: TextOverflow.ellipsis, style: TextStyle(fontFamily: f)),
+                    Text(f.contains('Nastaliq') ? 'یہ ایک نمونہ جملہ ہے' : 'Sample Aa Bb', style: TextStyle(fontFamily: f, fontSize: 11)),
+                  ]),
                 ),
             ],
             onChanged: enabled
@@ -123,43 +122,20 @@ class FontToolbar extends StatelessWidget {
           ),
         ),
         SizedBox(
-          width: 220,
-          child: Row(
-            children: [
-              const Text('Line'),
-              Expanded(
-                child: Slider(
-                  value: current.lineHeight.clamp(1.0, 3.0).toDouble(),
-                  min: 1.0,
-                  max: 3.0,
-                  divisions: 20,
-                  onChanged: enabled
-                      ? (v) => onChanged(current.copyWith(lineHeight: double.parse(v.toStringAsFixed(1))))
-                      : null,
-                ),
-              ),
-            ],
-          ),
+          width: 260,
+          child: Row(children: [
+            Expanded(flex:0, child: Text('Line ${current.lineHeight.toStringAsFixed(1)}x', overflow: TextOverflow.ellipsis)),
+            Expanded(child: Slider(value: current.lineHeight.clamp(1.0, 3.0).toDouble(), min: 1.0, max: 3.0, divisions: 20,
+              onChanged: enabled ? (v) => onChanged(current.copyWith(lineHeight: double.parse(v.toStringAsFixed(1)))) : null)),
+          ]),
         ),
         SizedBox(
-          width: 220,
-          child: Row(
-            children: [
-              Text('Space ${current.letterSpacing.toStringAsFixed(1)}'),
-              Expanded(
-                child: Slider(
-                  value: current.letterSpacing.clamp(0.0, 5.0).toDouble(),
-                  min: 0,
-                  max: 5,
-                  divisions: 20,
-                  onChanged: enabled
-                      ? (v) => onChanged(current.copyWith(
-                          letterSpacing: double.parse(v.toStringAsFixed(1))))
-                      : null,
-                ),
-              ),
-            ],
-          ),
+          width: 260,
+          child: Row(children: [
+            Expanded(flex:0, child: Text('Letter ${current.letterSpacing.toStringAsFixed(1)}', overflow: TextOverflow.ellipsis)),
+            Expanded(child: Slider(value: current.letterSpacing.clamp(0.0, 5.0).toDouble(), min: 0, max: 5, divisions: 20,
+              onChanged: enabled ? (v) => onChanged(current.copyWith(letterSpacing: double.parse(v.toStringAsFixed(1)))) : null)),
+          ]),
         ),
         ToggleButtons(
           isSelected: [current.bold, current.italic, current.underline],

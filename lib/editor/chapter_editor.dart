@@ -70,6 +70,7 @@ class _ChapterEditorState extends State<ChapterEditor>
   }
 
   String get _languageCode => widget.book.languageCode;
+  String _saveStatus = 'Saved';
 
   int get _wordCount => _chapter.blocks
       .expand((b) => b.text.trim().split(RegExp(r'\s+')))
@@ -111,7 +112,11 @@ class _ChapterEditorState extends State<ChapterEditor>
 
   void _touch() {
     widget.onChanged();
-    setState(() {});
+    setState(() => _saveStatus = 'Saving…');
+    Future<void>.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      setState(() => _saveStatus = 'Saved');
+    });
   }
 
   Iterable<int> get _targetIndexes {
@@ -289,7 +294,7 @@ class _ChapterEditorState extends State<ChapterEditor>
           children: [
             Text(_chapter.title),
             Text(
-              '$_wordCount words · $_characterCount characters',
+              '$_wordCount words · $_characterCount characters · $_saveStatus',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -1000,43 +1005,32 @@ class _BlockTile extends StatelessWidget {
                   child: Chip(label: Text('Selected'), visualDensity: VisualDensity.compact),
                 ),
               const Spacer(),
-              IconButton(
-                tooltip: rtl
-                    ? 'Switch to left-to-right'
-                    : 'Switch to right-to-left',
-                icon: Icon(rtl
-                    ? Icons.format_textdirection_r_to_l
-                    : Icons.format_textdirection_l_to_r),
-                onPressed: () {
-                  onBeforeChange();
-                  block.rtl = !rtl;
-                  onChanged();
-                },
+              PopupMenuButton<bool?>(
+                tooltip: 'Direction', initialValue: block.rtl,
+                onSelected: (v){ onBeforeChange(); block.rtl=v; onChanged(); },
+                itemBuilder: (_) => const [PopupMenuItem(value:null, child: Text('Auto')), PopupMenuItem(value:true, child: Text('RTL')), PopupMenuItem(value:false, child: Text('LTR'))],
+                child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Icon(rtl?Icons.format_textdirection_r_to_l:Icons.format_textdirection_l_to_r)),
               ),
-              IconButton(
-                tooltip: 'Delete block',
-                icon: const Icon(Icons.delete_outline),
-                onPressed: onDelete,
-              ),
+              IconButton(tooltip:'Split paragraph', icon:const Icon(Icons.call_split), onPressed:(){ final parts=block.text.split('\n'); if(parts.length<2) return; onBeforeChange(); block.text=parts.first; onChanged(); }),
+              IconButton(tooltip:'Delete block', icon: const Icon(Icons.delete_outline), onPressed:onDelete),
             ],
           ),
           TextFormField(
             initialValue: block.text,
             onTap: selectMode ? onToggleSelect : onFocus,
-            onChanged: (v) {
-              onBeforeChange();
-              block.text = v;
-              onChanged();
-            },
+            onChanged: (v) { onBeforeChange(); block.text = v; onChanged(); },
             maxLines: null,
             textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-            textAlign: TextAlign.start,
+            textAlign: block.type == BlockType.centered ? TextAlign.center : (rtl ? TextAlign.right : TextAlign.left),
             style: textStyle,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'Write here...',
-            ),
+            decoration: const InputDecoration(border: InputBorder.none, hintText: 'Write here...'),
           ),
+          Row(children:[
+            const Text('Paragraph spacing'),
+            Expanded(child: Slider(value: block.paragraphSpacing.clamp(0,32), min:0, max:32, divisions:16,
+              onChanged:(v){ onBeforeChange(); block.paragraphSpacing=v; onChanged(); })),
+            Text('${block.paragraphSpacing.round()} pt'),
+          ]),
         ],
       ),
     );
