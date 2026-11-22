@@ -134,38 +134,6 @@ class BookPreview extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(24),
               children: [
-                Card(
-                  color: Color(tpl.accent).withValues(alpha: 0.12),
-                  elevation: 0,
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      children: [
-                        Text(
-                          book.title.isEmpty ? 'Untitled book' : book.title,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: tpl.headingFont,
-                            fontSize: 34,
-                            fontWeight: FontWeight.bold,
-                            color: Color(tpl.text),
-                          ),
-                        ),
-                        if (book.author.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            book.author,
-                            style: TextStyle(
-                              color: Color(tpl.text).withValues(alpha: 0.8),
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 for (final chapter in book.allChapters) ...[
                   Card(
                     color: Color(tpl.surface),
