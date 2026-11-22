@@ -26,10 +26,10 @@ class AiSettings {
   final String backendUrl;
 
   const AiSettings({
-    this.provider = AiProvider.gemini,
+    this.provider = AiProvider.ollama,
     this.apiKey = '',
-    this.model = 'gemini-2.5-flash',
-    this.backendUrl = '',
+    this.model = 'qwen2.5:3b',
+    this.backendUrl = 'https://api.docsoncalls.com/ollama',
   });
 
   bool get isConfigured => switch (provider) {
@@ -58,15 +58,16 @@ class AiSettings {
       };
 
   factory AiSettings.fromJson(Map<String, dynamic> json) {
+    final rawProvider = json['provider'] as String?;
     final provider = AiProvider.values.firstWhere(
-      (p) => p.name == json['provider'],
-      orElse: () => AiProvider.gemini,
+      (p) => p.name == rawProvider,
+      orElse: () => rawProvider == 'backend' ? AiProvider.ollama : AiProvider.ollama,
     );
     return AiSettings(
       provider: provider,
       apiKey: json['apiKey'] as String? ?? '',
-      model: json['model'] as String? ?? provider.defaultModel,
-      backendUrl: json['backendUrl'] as String? ?? '',
+      model: json['model'] as String? ?? (provider == AiProvider.ollama ? 'qwen2.5:3b' : provider.defaultModel),
+      backendUrl: json['backendUrl'] as String? ?? (provider == AiProvider.ollama ? 'https://api.docsoncalls.com/ollama' : ''),
     );
   }
 }

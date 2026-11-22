@@ -81,11 +81,11 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
                 onChanged: (_) => setState(() => _testResult = null),
                 decoration: const InputDecoration(
                   labelText: 'Ollama URL',
-                  helperText: 'Desktop/mobile: http://localhost:11434. Web: public HTTPS Ollama proxy with CORS.',
+                  helperText: 'Recommended: https://api.docsoncalls.com/ollama (GoDaddy). Local: http://localhost:11434',
                 ),
               ),
             if (_provider == AiProvider.ollama && kIsWeb && _backendUrl.text.trim().startsWith('http://'))
-              Padding(padding: const EdgeInsets.only(top: 6), child: Text('Web builds may block local HTTP Ollama; use a public HTTPS Ollama proxy with CORS, or run desktop app.', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))),
+              Padding(padding: const EdgeInsets.only(top: 6), child: Text('Web builds may block local HTTP Ollama; use https://api.docsoncalls.com/ollama.', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))),
             if (_provider == AiProvider.ollama) const SizedBox(height: 8),
             if (_provider == AiProvider.ollama)
               Row(children: [
