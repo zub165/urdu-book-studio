@@ -29,7 +29,7 @@ class EpubExporter extends BookExporter {
     archive.addFile(zipTextEntry('META-INF/container.xml', _container));
     archive.addFile(zipTextEntry('OEBPS/style.css', _css));
     archive.addFile(zipTextEntry('OEBPS/nav.xhtml', _nav(book)));
-    for (var i = 0; i < book.chapters.length; i++) {
+    for (var i = 0; i < book.allChapters.length; i++) {
       archive.addFile(
           zipTextEntry('OEBPS/chapter_${i + 1}.xhtml', _chapter(book, i)));
     }
@@ -58,7 +58,7 @@ class EpubExporter extends BookExporter {
       ..write('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>')
       ..write('<item id="css" href="style.css" media-type="text/css"/>');
     final spine = StringBuffer();
-    for (var i = 0; i < book.chapters.length; i++) {
+    for (var i = 0; i < book.allChapters.length; i++) {
       manifest.write('<item id="c${i + 1}" href="chapter_${i + 1}.xhtml" '
           'media-type="application/xhtml+xml"/>');
       spine.write('<itemref idref="c${i + 1}"/>');
@@ -81,9 +81,9 @@ class EpubExporter extends BookExporter {
 
   String _nav(Book book) {
     final items = StringBuffer();
-    for (var i = 0; i < book.chapters.length; i++) {
+    for (var i = 0; i < book.allChapters.length; i++) {
       items.write('<li><a href="chapter_${i + 1}.xhtml">'
-          '${xmlEscape(book.chapters[i].title)}</a></li>');
+          '${xmlEscape(book.allChapters[i].title)}</a></li>');
     }
     final lang = book.languageCode;
     final dir = book.isRtl ? 'rtl' : 'ltr';
@@ -97,7 +97,7 @@ class EpubExporter extends BookExporter {
   }
 
   String _chapter(Book book, int index) {
-    final chapter = book.chapters[index];
+    final chapter = book.allChapters[index];
     final lang = book.languageCode;
     final dir = book.isRtl ? 'rtl' : 'ltr';
     final body = StringBuffer()

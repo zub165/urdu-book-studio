@@ -60,7 +60,7 @@ class RtfExporter extends BookExporter {
     if (book.author.isNotEmpty) {
       para(book.author, BlockType.centered, base, book.isRtl);
     }
-    for (final chapter in book.chapters) {
+    for (final chapter in book.allChapters) {
       body.write('\\page\n');
       para(chapter.title, BlockType.heading1, base, book.isRtl);
       for (final block in chapter.blocks) {

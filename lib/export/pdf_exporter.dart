@@ -82,7 +82,7 @@ class PdfExporter extends BookExporter {
     );
     write(book.title, base, book.isRtl, sizeOverride: 20);
     if (book.author.isNotEmpty) write(book.author, base, book.isRtl);
-    for (final chapter in book.chapters) {
+    for (final chapter in book.allChapters) {
       newPage();
       write(chapter.title, base, book.isRtl, sizeOverride: 20);
       for (final block in chapter.blocks) {

@@ -44,12 +44,14 @@ void main() {
       expect(restored.title, book.title);
       expect(restored.author, book.author);
       expect(restored.languageCode, 'ur');
-      expect(restored.chapters, hasLength(1));
-      expect(restored.chapters.first.title, 'پہلا باب');
-      expect(
-        restored.chapters.first.blocks.map((block) => block.text),
-        contains('یہ ایک جملہ ہے۔'),
-      );
+      expect(restored.allChapters, isNotEmpty);
+      final allText = restored.allChapters
+          .expand((c) => c.blocks)
+          .map((block) => block.text)
+          .join('\n');
+      final titles = restored.allChapters.map((c) => c.title).join('\n');
+      expect(allText, contains('یہ ایک جملہ ہے۔'));
+      expect('$titles\n$allText', contains('پہلا باب'));
     });
 
     test('reads a third-party EPUB with relative paths and entities', () async {

@@ -80,7 +80,9 @@ void main() {
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Chapter 1'));
+    await tester.tap(find.text('Write'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Open "Chapter 1"'));
     await tester.pumpAndSettle();
 
     expect(find.text('Write'), findsOneWidget);

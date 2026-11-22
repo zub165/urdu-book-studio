@@ -57,7 +57,7 @@ String bookToHtml(Book book, {bool forWord = false}) {
   if (book.author.isNotEmpty) {
     buffer.write('<p class="center">${xmlEscape(book.author)}</p>\n');
   }
-  for (final chapter in book.chapters) {
+  for (final chapter in book.allChapters) {
     buffer
       ..write('<div style="page-break-before:always"></div>\n')
       ..write('<section>\n<h1>${xmlEscape(chapter.title)}</h1>\n');

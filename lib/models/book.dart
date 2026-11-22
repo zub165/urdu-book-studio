@@ -148,26 +148,91 @@ class Chapter {
       );
 }
 
+class BookComment {
+  final String id;
+  String text;
+  String chapterTitle;
+  bool resolved;
+  final DateTime createdAt;
+
+  BookComment({String? id, required this.text, this.chapterTitle = '', this.resolved = false, DateTime? createdAt})
+      : id = id ?? const Uuid().v4(),
+        createdAt = createdAt ?? DateTime.now();
+
+  Map<String, dynamic> toJson() => {
+        'id': id, 'text': text, 'chapterTitle': chapterTitle, 'resolved': resolved, 'createdAt': createdAt.toIso8601String(),
+      };
+  factory BookComment.fromJson(Map<String, dynamic> j) => BookComment(
+        id: j['id'] as String?, text: j['text'] as String? ?? '', chapterTitle: j['chapterTitle'] as String? ?? '',
+        resolved: j['resolved'] as bool? ?? false, createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
+      );
+}
+
+class BookSnapshot {
+  final String id;
+  final String label;
+  final DateTime createdAt;
+  final Map<String, dynamic> bookData;
+
+  BookSnapshot({String? id, required this.label, DateTime? createdAt, required this.bookData})
+      : id = id ?? const Uuid().v4(),
+        createdAt = createdAt ?? DateTime.now();
+
+  Map<String, dynamic> toJson() => {'id': id, 'label': label, 'createdAt': createdAt.toIso8601String(), 'bookData': bookData};
+  factory BookSnapshot.fromJson(Map<String, dynamic> j) => BookSnapshot(
+        id: j['id'] as String?, label: j['label'] as String? ?? 'Snapshot',
+        createdAt: DateTime.tryParse(j['createdAt'] as String? ?? '') ?? DateTime.now(),
+        bookData: Map<String, dynamic>.from(j['bookData'] as Map? ?? const {}),
+      );
+}
+
 class Book {
   final String id;
   String title;
+  String subtitle;
   String author;
+  String description;
+  String isbn;
   String languageCode;
   String templateId;
+  String? coverImageBase64;
+  String pageSize; // a4, a5, letter, 6x9
+  double marginMm;
+  bool showPageNumbers;
+  bool generateToc;
   final DateTime createdAt;
   DateTime updatedAt;
+  final List<Chapter> frontMatter;
   final List<Chapter> chapters;
+  final List<Chapter> backMatter;
+  final List<BookComment> comments;
+  final List<BookSnapshot> snapshots;
 
   Book({
     required this.id,
     required this.title,
+    this.subtitle = '',
     required this.author,
+    this.description = '',
+    this.isbn = '',
     required this.languageCode,
     this.templateId = 'classic',
+    this.coverImageBase64,
+    this.pageSize = 'a5',
+    this.marginMm = 20,
+    this.showPageNumbers = true,
+    this.generateToc = true,
     required this.createdAt,
     required this.updatedAt,
+    List<Chapter>? frontMatter,
     required this.chapters,
-  });
+    List<Chapter>? backMatter,
+    List<BookComment>? comments,
+    List<BookSnapshot>? snapshots,
+  })  : frontMatter = frontMatter ?? <Chapter>[],
+        backMatter = backMatter ?? <Chapter>[],
+        comments = comments ?? <BookComment>[],
+        snapshots = snapshots ?? <BookSnapshot>[];
 
   factory Book.create({
     required String title,
@@ -183,38 +248,61 @@ class Book {
       templateId: isRtlLanguage(languageCode) ? 'urdu_nastaliq' : 'classic',
       createdAt: now,
       updatedAt: now,
+      frontMatter: [
+        Chapter(title: 'Title Page', blocks: [
+          Block(type: BlockType.centered, text: title, style: defaultStyleFor(languageCode)),
+        ]),
+      ],
       chapters: [
         Chapter(
           title: 'Chapter 1',
           blocks: [Block(style: defaultStyleFor(languageCode))],
         ),
       ],
+      backMatter: [
+        Chapter(title: 'Acknowledgments', blocks: [
+          Block(style: defaultStyleFor(languageCode)),
+        ]),
+      ],
     );
   }
 
   bool get isRtl => isRtlLanguage(languageCode);
 
+  List<Chapter> get allChapters => [...frontMatter, ...chapters, ...backMatter];
+
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'author': author,
-        'languageCode': languageCode,
-        'templateId': templateId,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
+        'id': id, 'title': title, 'subtitle': subtitle, 'author': author, 'description': description, 'isbn': isbn,
+        'languageCode': languageCode, 'templateId': templateId, 'coverImageBase64': coverImageBase64,
+        'pageSize': pageSize, 'marginMm': marginMm, 'showPageNumbers': showPageNumbers, 'generateToc': generateToc,
+        'createdAt': createdAt.toIso8601String(), 'updatedAt': updatedAt.toIso8601String(),
+        'frontMatter': frontMatter.map((c) => c.toJson()).toList(),
         'chapters': chapters.map((c) => c.toJson()).toList(),
+        'backMatter': backMatter.map((c) => c.toJson()).toList(),
+        'comments': comments.map((c) => c.toJson()).toList(),
+        'snapshots': snapshots.map((s) => s.toJson()).toList(),
       };
 
   factory Book.fromJson(Map<String, dynamic> j) => Book(
         id: j['id'] as String,
         title: j['title'] as String? ?? '',
+        subtitle: j['subtitle'] as String? ?? '',
         author: j['author'] as String? ?? '',
+        description: j['description'] as String? ?? '',
+        isbn: j['isbn'] as String? ?? '',
         languageCode: j['languageCode'] as String? ?? 'ur',
         templateId: j['templateId'] as String? ?? 'classic',
+        coverImageBase64: j['coverImageBase64'] as String?,
+        pageSize: j['pageSize'] as String? ?? 'a5',
+        marginMm: (j['marginMm'] as num?)?.toDouble() ?? 20,
+        showPageNumbers: j['showPageNumbers'] as bool? ?? true,
+        generateToc: j['generateToc'] as bool? ?? true,
         createdAt: DateTime.parse(j['createdAt'] as String),
         updatedAt: DateTime.parse(j['updatedAt'] as String),
-        chapters: (j['chapters'] as List<dynamic>? ?? [])
-            .map((c) => Chapter.fromJson(c as Map<String, dynamic>))
-            .toList(),
+        frontMatter: (j['frontMatter'] as List<dynamic>? ?? []).map((c) => Chapter.fromJson(c as Map<String, dynamic>)).toList(),
+        chapters: (j['chapters'] as List<dynamic>? ?? []).map((c) => Chapter.fromJson(c as Map<String, dynamic>)).toList(),
+        backMatter: (j['backMatter'] as List<dynamic>? ?? []).map((c) => Chapter.fromJson(c as Map<String, dynamic>)).toList(),
+        comments: (j['comments'] as List<dynamic>? ?? []).map((c) => BookComment.fromJson(c as Map<String, dynamic>)).toList(),
+        snapshots: (j['snapshots'] as List<dynamic>? ?? []).map((s) => BookSnapshot.fromJson(s as Map<String, dynamic>)).toList(),
       );
 }

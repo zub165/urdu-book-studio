@@ -39,6 +39,8 @@ class BookImporter {
       author: '',
       languageCode: languageCode,
     );
+    book.frontMatter.clear();
+    book.backMatter.clear();
     book.chapters
       ..clear()
       ..add(Chapter(title: 'Imported chapter', blocks: blocks));

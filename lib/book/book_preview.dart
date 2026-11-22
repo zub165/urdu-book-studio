@@ -165,7 +165,7 @@ class BookPreview extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                for (final chapter in book.chapters) ...[
+                for (final chapter in book.allChapters) ...[
                   Card(
                     color: Color(tpl.surface),
                     elevation: 0,

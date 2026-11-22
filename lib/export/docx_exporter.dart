@@ -50,7 +50,7 @@ class DocxExporter extends BookExporter {
     if (book.author.isNotEmpty) {
       body.write(_para(book.author, BlockType.centered, base, rtl: rtl, lang: lang));
     }
-    for (final chapter in book.chapters) {
+    for (final chapter in book.allChapters) {
       body.write('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
       body.write(_para(chapter.title, BlockType.heading1, base, rtl: rtl, lang: lang));
       for (final block in chapter.blocks) {

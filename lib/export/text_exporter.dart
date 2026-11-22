@@ -25,7 +25,7 @@ class TxtExporter extends BookExporter {
       ..writeln(book.title);
     if (book.author.isNotEmpty) out.writeln(book.author);
     out.writeln();
-    for (final chapter in book.chapters) {
+    for (final chapter in book.allChapters) {
       out.writeln(chapter.title);
       out.writeln();
       for (final block in chapter.blocks) {
@@ -57,7 +57,7 @@ class MarkdownExporter extends BookExporter {
     final out = StringBuffer()..writeln('# ${book.title}');
     if (book.author.isNotEmpty) out.writeln('\n*${book.author}*');
     out.writeln();
-    for (final chapter in book.chapters) {
+    for (final chapter in book.allChapters) {
       out.writeln('## ${chapter.title}\n');
       for (final block in chapter.blocks) {
         final text = block.text.trim();
