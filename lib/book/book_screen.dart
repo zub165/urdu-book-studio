@@ -236,7 +236,23 @@ class _BookScreenState extends State<BookScreen> with SingleTickerProviderStateM
     ]);
   }
 
-  Widget _chapterList(String title, List<Chapter> target) {
+  Future<void> _addSection(List<Chapter> target, String title) async {
+    final t = await _askText('Add page', title);
+    if (t == null) return;
+    target.add(Chapter(title: t, blocks: [Block(style: defaultStyleFor(book.languageCode))]));
+    _changed();
+  }
+
+  Widget _addMenu(String tooltip, List<String> items, void Function(String) onPick) {
+    return PopupMenuButton<String>(
+      tooltip: tooltip,
+      icon: const Icon(Icons.add_circle_outline),
+      onSelected: onPick,
+      itemBuilder: (_) => [for (final item in items) PopupMenuItem(value: item, child: Text(item))],
+    );
+  }
+
+  Widget _chapterList(String title, List<Chapter> target, {required List<String> addItems}) {
     return _sectionCard(title, ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -254,27 +270,30 @@ class _BookScreenState extends State<BookScreen> with SingleTickerProviderStateM
           title: Text(c.title),
           subtitle: Text('${c.blocks.length} blocks'),
           onTap: () => _openChapter(c),
-          trailing: PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'rename') _renameChapter(c);
-              if (v == 'delete') _deleteChapter(target, c);
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'rename', child: Text('Rename')),
-              PopupMenuItem(value: 'delete', child: Text('Delete')),
-            ],
-          ),
+          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+            IconButton(tooltip: 'Rename', icon: const Icon(Icons.edit_outlined), onPressed: () => _renameChapter(c)),
+            PopupMenuButton<String>(
+              onSelected: (v) {
+                if (v == 'rename') _renameChapter(c);
+                if (v == 'delete') _deleteChapter(target, c);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'rename', child: Text('Rename')),
+                PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
+          ]),
         );
       },
-    ), actions: [IconButton(onPressed: () => _addChapter(target), icon: const Icon(Icons.add))]);
+    ), actions: [_addMenu('Add $title', addItems, (v) => _addSection(target, v == 'Custom page' ? '' : v))]);
   }
 
   Widget _buildOutline() {
     return ListView(padding: const EdgeInsets.all(16), children: [
-      _chapterList('Front matter', book.frontMatter),
-      _chapterList('Chapters', book.chapters),
-      _chapterList('Back matter', book.backMatter),
-      _sectionCard('Outline tips', const Text('Reorder sections by dragging. Tap a section to edit. Add front/back matter like title page, dedication, acknowledgments.')),
+      _chapterList('Front matter', book.frontMatter, addItems: const ['Title Page','Copyright','Dedication','Epigraph','Table of Contents','Preface','Introduction','Prologue','Foreword','Custom page']),
+      _chapterList('Body', book.chapters, addItems: const ['Part Page','Chapter Page','Custom page']),
+      _chapterList('Back matter', book.backMatter, addItems: const ['Books by This Author','About the Author','Books in This Series','Praise for Author','Epilogue','Afterword','Acknowledgments','Custom page']),
+      _sectionCard('Outline tips', const Text('Use + to add pages to Front Matter, Body, or Back Matter. Drag to reorder. Tap a page to edit. Use Rename beside each page.')),
     ]);
   }
 
