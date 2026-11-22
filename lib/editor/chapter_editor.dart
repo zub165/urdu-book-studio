@@ -347,6 +347,7 @@ class _ChapterEditorState extends State<ChapterEditor>
             icon: Icon(_continuousView ? Icons.view_agenda_outlined : Icons.article_outlined),
             onPressed: () => setState(() { _continuousView = !_continuousView; _selectMode = false; _selected.clear(); }),
           ),
+          IconButton(tooltip: 'Select all blocks', icon: const Icon(Icons.select_all), onPressed: _chapter.blocks.isEmpty ? null : _selectAll),
           if (!_continuousView)
             IconButton(
               tooltip: _selectMode ? 'Exit select mode' : 'Select blocks',
@@ -494,8 +495,7 @@ class _ChapterEditorState extends State<ChapterEditor>
                       icon: const Icon(Icons.format_paint_outlined),
                       label: const Text('Apply to all blocks'),
                     ),
-                    if (!_continuousView)
-                      OutlinedButton.icon(onPressed: blocks.isEmpty ? null : _selectAll, icon: const Icon(Icons.select_all), label: const Text('Select all')),
+                    OutlinedButton.icon(onPressed: blocks.isEmpty ? null : _selectAll, icon: const Icon(Icons.select_all), label: const Text('Select all blocks')),
                     if (_selectMode || _selected.isNotEmpty)
                       OutlinedButton.icon(
                         onPressed: _clearSelection,
