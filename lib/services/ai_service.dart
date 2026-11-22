@@ -219,26 +219,35 @@ class AiService {
         }),
       );
 
-  Future<http.Response> _backend(String prompt, AiSettings settings) {
+  Future<http.Response> _backend(String prompt, AiSettings settings) async {
     final base = settings.backendUrl.trim();
-    final uri = Uri.parse(base);
+    var uri = Uri.parse(base);
     final headers = <String, String>{'Content-Type': 'application/json'};
     final key = settings.apiKey.trim();
     if (key.isNotEmpty) {
       headers['Authorization'] = 'Bearer $key';
       headers['X-API-Key'] = key;
     }
-    return _client.post(
-      uri,
-      headers: headers,
-      body: jsonEncode({
-        'prompt': prompt,
-        'text': prompt,
-        'model': settings.model,
-        'turns': [{'role': 'user', 'content': prompt}],
-        'messages': [{'role': 'user', 'content': prompt}],
-      }),
-    ).timeout(const Duration(seconds: 30));
+    final body = jsonEncode({
+      'prompt': prompt,
+      'text': prompt,
+      'model': settings.model,
+      'turns': [{'role': 'user', 'content': prompt}],
+      'messages': [{'role': 'user', 'content': prompt}],
+    });
+    var response = await _client.post(uri, headers: headers, body: body).timeout(const Duration(seconds: 30));
+    if (response.statusCode == 404) {
+      final path = uri.path;
+      if (path.isEmpty || path == '/' || path.endsWith('/generate')) {
+        final altPath = path.endsWith('/generate') ? path.replaceFirst(RegExp(r'/generate$'), '/chat') : '${path.endsWith('/') ? path.substring(0, path.length - 1) : path}/api/chat';
+        final alt = uri.replace(path: altPath.startsWith('/') ? altPath : '/$altPath');
+        response = await _client.post(alt, headers: headers, body: body).timeout(const Duration(seconds: 30));
+      } else if (!path.endsWith('/api/chat')) {
+        final alt = uri.replace(path: '/api/chat');
+        response = await _client.post(alt, headers: headers, body: body).timeout(const Duration(seconds: 30));
+      }
+    }
+    return response;
   }
 
   String _backendText(String body) {
