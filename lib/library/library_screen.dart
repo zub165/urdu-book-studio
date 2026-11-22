@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import '../book/book_screen.dart';
 import '../core/app_strings.dart';
@@ -119,8 +120,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _duplicate(Book book) async {
-    final copy = Book.fromJson(book.toJson())
-      ..title = '${book.title} (Copy)';
+    final json = book.toJson();
+    json['id'] = const Uuid().v4();
+    json['title'] = '${book.title} (Copy)';
+    final now = DateTime.now().toIso8601String();
+    json['createdAt'] = now;
+    json['updatedAt'] = now;
+    final copy = Book.fromJson(json);
     setState(() => _books.insert(0, copy));
     await _persist();
   }
