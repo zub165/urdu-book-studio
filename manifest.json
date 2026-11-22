@@ -1,6 +1,6 @@
 {
-    "name": "Urdu Book Studio",
-    "short_name": "UrduBookStudio",
+    "name": "Book Writer & Publisher",
+    "short_name": "BookWriter",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0F766E",
