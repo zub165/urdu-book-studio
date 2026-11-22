@@ -355,13 +355,27 @@ class _ChapterEditorState extends State<ChapterEditor>
               PopupMenuItem(value: 'settings', child: Text('AI settings')),
             ],
           ),
-          PopupMenuButton<BlockType>(
-            tooltip: 'Add block',
-            icon: const Icon(Icons.add),
-            onSelected: _addBlock,
+          PopupMenuButton<String>(
+            tooltip: 'Insert / Heading / Save',
+            icon: const Icon(Icons.add_circle_outline),
+            onSelected: (v) {
+              if (v == 'save') { widget.onChanged(); setState(()=>_saveStatus='Saved'); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved'))); return; }
+              if (v.startsWith('type:')) { _addBlock(BlockType.values.byName(v.split(':')[1])); return; }
+              if (v.startsWith('set:')) {
+                final t = BlockType.values.byName(v.split(':')[1]);
+                _record();
+                for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { b.type = t; }
+                _touch();
+              }
+            },
             itemBuilder: (_) => [
-              for (final t in BlockType.values)
-                PopupMenuItem(value: t, child: Text(t.label)),
+              const PopupMenuItem(value: 'save', child: ListTile(leading: Icon(Icons.save_outlined), title: Text('Save now'))),
+              const PopupMenuDivider(),
+              const PopupMenuItem(enabled: false, child: Text('Insert block')),
+              for (final t in BlockType.values) PopupMenuItem(value: 'type:${t.name}', child: Text('Insert ${t.label}')),
+              const PopupMenuDivider(),
+              const PopupMenuItem(enabled: false, child: Text('Set selected/active as')),
+              for (final t in BlockType.values) PopupMenuItem(value: 'set:${t.name}', child: Text(t.label)),
             ],
           ),
         ],
