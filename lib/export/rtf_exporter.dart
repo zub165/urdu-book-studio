@@ -56,11 +56,7 @@ class RtfExporter extends BookExporter {
     }
 
     final base = TextStyleData(fontFamily: book.isRtl ? 'Noto Nastaliq Urdu' : 'Roboto');
-    para(book.title, BlockType.heading1, base, book.isRtl);
-    if (book.author.isNotEmpty) {
-      para(book.author, BlockType.centered, base, book.isRtl);
-    }
-    for (final chapter in book.allChapters) {
+        for (final chapter in book.allChapters) {
       body.write('\\page\n');
       para(chapter.title, BlockType.heading1, base, book.isRtl);
       for (final block in chapter.blocks) {

@@ -52,15 +52,12 @@ String bookToHtml(Book book, {bool forWord = false}) {
         '.center{text-align:center;}'
         'blockquote{margin:1em 2em;font-style:italic;}'
         '</style>\n')
-    ..write('</head>\n<body dir="$dir">\n')
-    ..write('<h1 class="center">${xmlEscape(book.title)}</h1>\n');
-  if (book.author.isNotEmpty) {
-    buffer.write('<p class="center">${xmlEscape(book.author)}</p>\n');
-  }
+    ..write('</head>\n<body dir="$dir">\n');
+  var first = true;
   for (final chapter in book.allChapters) {
-    buffer
-      ..write('<div style="page-break-before:always"></div>\n')
-      ..write('<section>\n<h1>${xmlEscape(chapter.title)}</h1>\n');
+    if (!first) buffer.write('<div style="page-break-before:always"></div>\n');
+    first = false;
+    buffer.write('<section>\n<h1>${xmlEscape(chapter.title)}</h1>\n');
     for (final block in chapter.blocks) {
       buffer.writeln(blockToHtml(block, lang));
     }

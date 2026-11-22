@@ -45,13 +45,11 @@ class DocxExporter extends BookExporter {
     final rtl = book.isRtl;
     final lang = book.languageCode;
     final base = TextStyleData(fontFamily: rtl ? 'Noto Nastaliq Urdu' : 'Roboto');
-    final body = StringBuffer()
-      ..write(_para(book.title, BlockType.heading1, base, rtl: rtl, lang: lang));
-    if (book.author.isNotEmpty) {
-      body.write(_para(book.author, BlockType.centered, base, rtl: rtl, lang: lang));
-    }
+    final body = StringBuffer();
+    var first = true;
     for (final chapter in book.allChapters) {
-      body.write('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      if (!first) body.write('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+      first = false;
       body.write(_para(chapter.title, BlockType.heading1, base, rtl: rtl, lang: lang));
       for (final block in chapter.blocks) {
         body.write(_para(block.text, block.type, block.style,

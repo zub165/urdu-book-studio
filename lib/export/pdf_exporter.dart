@@ -80,10 +80,10 @@ class PdfExporter extends BookExporter {
     final base = TextStyleData(
       fontFamily: book.isRtl ? 'Noto Nastaliq Urdu' : 'Noto Naskh Arabic',
     );
-    write(book.title, base, book.isRtl, sizeOverride: 20);
-    if (book.author.isNotEmpty) write(book.author, base, book.isRtl);
+    var first = true;
     for (final chapter in book.allChapters) {
-      newPage();
+      if (!first) newPage();
+      first = false;
       write(chapter.title, base, book.isRtl, sizeOverride: 20);
       for (final block in chapter.blocks) {
         write(

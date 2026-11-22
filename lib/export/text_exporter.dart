@@ -21,10 +21,7 @@ class TxtExporter extends BookExporter {
       Uint8List.fromList(utf8.encode('\uFEFF${buildPlainText(book)}'));
 
   static String buildPlainText(Book book) {
-    final out = StringBuffer()
-      ..writeln(book.title);
-    if (book.author.isNotEmpty) out.writeln(book.author);
-    out.writeln();
+    final out = StringBuffer();
     for (final chapter in book.allChapters) {
       out.writeln(chapter.title);
       out.writeln();
@@ -54,9 +51,7 @@ class MarkdownExporter extends BookExporter {
 
   static String buildMarkdown(Book book) {
     final lang = book.languageCode;
-    final out = StringBuffer()..writeln('# ${book.title}');
-    if (book.author.isNotEmpty) out.writeln('\n*${book.author}*');
-    out.writeln();
+    final out = StringBuffer();
     for (final chapter in book.allChapters) {
       out.writeln('## ${chapter.title}\n');
       for (final block in chapter.blocks) {
