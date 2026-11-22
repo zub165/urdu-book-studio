@@ -78,9 +78,10 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
             if (_provider == AiProvider.backend)
               TextField(
                 controller: _backendUrl,
+                onChanged: (_) => setState(() => _testResult = null),
                 decoration: const InputDecoration(
                   labelText: 'Backend URL',
-                  helperText: 'HTTPS endpoint required for web (CORS enabled). e.g. https://example.com/api/chat',
+                  helperText: 'Web: public HTTPS + CORS. Desktop/mobile: HTTP/local OK. e.g. https://host/api/chat',
                 ),
               ),
             if (_provider == AiProvider.backend && kIsWeb && _backendUrl.text.trim().startsWith('http://'))
