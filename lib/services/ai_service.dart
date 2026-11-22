@@ -150,20 +150,28 @@ class AiService {
           ? 'Set the GoDaddy ML backend URL in AI settings first.'
           : 'Add an API key in AI settings first.');
     }
-    final response = switch (settings.provider) {
-      AiProvider.gemini => await _gemini(prompt, settings),
-      AiProvider.openai => await _openai(prompt, settings),
-      AiProvider.backend => await _backend(prompt, settings),
-    };
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw AiException(_errorFrom(response.body) ??
-          'AI request failed (${response.statusCode}).');
+    try {
+      final response = switch (settings.provider) {
+        AiProvider.gemini => await _gemini(prompt, settings),
+        AiProvider.openai => await _openai(prompt, settings),
+        AiProvider.backend => await _backend(prompt, settings),
+      };
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AiException(_errorFrom(response.body) ?? 'AI request failed (${response.statusCode}).');
+      }
+      final text = settings.provider == AiProvider.backend
+          ? _backendText(response.body)
+          : _jsonProviderText(response.body, settings.provider);
+      if (text.trim().isEmpty) throw const AiException('AI returned no text.');
+      return text.trim();
+    } catch (e) {
+      if (e is AiException) rethrow;
+      final msg = e.toString();
+      if (settings.provider == AiProvider.backend && (msg.contains('Failed to fetch') || msg.contains('XMLHttpRequest') || msg.contains('SocketException'))) {
+        throw AiException('Cannot reach backend. For GitHub Pages/web use a public HTTPS URL with CORS enabled; HTTP/private endpoints are blocked by browsers. Original: $msg');
+      }
+      throw AiException('AI request failed: $msg');
     }
-    final text = settings.provider == AiProvider.backend
-        ? _backendText(response.body)
-        : _jsonProviderText(response.body, settings.provider);
-    if (text.trim().isEmpty) throw const AiException('AI returned no text.');
-    return text.trim();
   }
 
   String _jsonProviderText(String body, AiProvider provider) {
@@ -215,8 +223,10 @@ class AiService {
     final base = settings.backendUrl.trim();
     final uri = Uri.parse(base);
     final headers = <String, String>{'Content-Type': 'application/json'};
-    if (settings.apiKey.trim().isNotEmpty) {
-      headers['Authorization'] = 'Bearer ${settings.apiKey.trim()}';
+    final key = settings.apiKey.trim();
+    if (key.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $key';
+      headers['X-API-Key'] = key;
     }
     return _client.post(
       uri,
@@ -225,14 +235,10 @@ class AiService {
         'prompt': prompt,
         'text': prompt,
         'model': settings.model,
-        'turns': [
-          {'role': 'user', 'content': prompt}
-        ],
-        'messages': [
-          {'role': 'user', 'content': prompt}
-        ],
+        'turns': [{'role': 'user', 'content': prompt}],
+        'messages': [{'role': 'user', 'content': prompt}],
       }),
-    );
+    ).timeout(const Duration(seconds: 30));
   }
 
   String _backendText(String body) {
