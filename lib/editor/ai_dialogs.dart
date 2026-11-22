@@ -24,6 +24,7 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
   late AiProvider _provider;
   late TextEditingController _key;
   late TextEditingController _model;
+  late TextEditingController _backendUrl;
 
   @override
   void initState() {
@@ -31,12 +32,14 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
     _provider = widget.settings.provider;
     _key = TextEditingController(text: widget.settings.apiKey);
     _model = TextEditingController(text: widget.settings.model);
+    _backendUrl = TextEditingController(text: widget.settings.backendUrl);
   }
 
   @override
   void dispose() {
     _key.dispose();
     _model.dispose();
+    _backendUrl.dispose();
     super.dispose();
   }
 
@@ -68,11 +71,22 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
               },
             ),
             const SizedBox(height: 8),
+            if (_provider == AiProvider.backend)
+              TextField(
+                controller: _backendUrl,
+                decoration: const InputDecoration(
+                  labelText: 'Backend URL',
+                  helperText: 'GoDaddy ML endpoint, e.g. https://example.com/api/generate',
+                ),
+              ),
+            if (_provider == AiProvider.backend) const SizedBox(height: 8),
             TextField(
               controller: _key,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'API key',
+              decoration: InputDecoration(
+                labelText: _provider == AiProvider.backend
+                    ? 'Backend token (optional)'
+                    : 'API key',
                 helperText: 'Stored only on this device',
               ),
             ),
@@ -98,6 +112,7 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
               model: _model.text.trim().isEmpty
                   ? _provider.defaultModel
                   : _model.text.trim(),
+              backendUrl: _backendUrl.text.trim(),
             ),
           ),
           child: const Text('Save'),

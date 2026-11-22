@@ -2,9 +2,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../book/book_screen.dart';
+import '../core/app_strings.dart';
 import '../core/constants.dart';
 import '../core/text_direction.dart';
 import '../models/book.dart';
+import '../services/app_settings.dart';
 import '../storage/book_importer.dart';
 import '../storage/book_repository.dart';
 
@@ -90,19 +92,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _delete(Book book) async {
+    final s = AppStrings.of(context);
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete book?'),
+        title: Text(s.deleteBook),
         content: Text('"${book.title}" will be removed from this device.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(s.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(s.delete),
           ),
         ],
       ),
@@ -112,8 +115,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _persist();
   }
 
+  Future<void> _openSettings() async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => const _AppSettingsDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
     final query = _search.text.trim().toLowerCase();
     final visible = _books.where((book) {
       if (query.isEmpty) return true;
@@ -124,12 +135,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Urdu Book Studio'),
+        title: Text(s.appName),
         actions: [
           IconButton(
-            tooltip: 'Import book file',
+            tooltip: s.importFile,
             icon: const Icon(Icons.file_upload_outlined),
             onPressed: _importBook,
+          ),
+          IconButton(
+            tooltip: s.settings,
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: _openSettings,
           ),
         ],
       ),
@@ -152,7 +168,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 controller: _search,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'Search books, authors or languages',
+                  hintText: s.searchHint,
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   border: OutlineInputBorder(
@@ -176,11 +192,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                               const SizedBox(height: 12),
-                              Text(
-                                _books.isEmpty
-                                    ? 'No books yet. Tap "New book" or import a file.'
-                                    : 'No matching books.',
-                              ),
+                              Text(_books.isEmpty ? s.noBooks : s.noMatches),
                             ],
                           ),
                         )
@@ -212,7 +224,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                     child: Text(initial.toUpperCase()),
                                   ),
                                   title: Text(
-                                    book.title.isEmpty ? 'Untitled book' : book.title,
+                                    book.title.isEmpty ? s.untitledBook : book.title,
                                     textDirection:
                                         rtl ? TextDirection.rtl : TextDirection.ltr,
                                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -230,7 +242,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                           ),
                                           visualDensity: VisualDensity.compact,
                                         ),
-                                        Text('${book.chapters.length} chapters'),
+                                        Text('${book.chapters.length} ${s.chapters}'),
                                         Text(
                                           book.updatedAt
                                               .toIso8601String()
@@ -241,7 +253,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   ),
                                   onTap: () => _open(book),
                                   trailing: IconButton(
-                                    tooltip: 'Delete',
+                                    tooltip: s.delete,
                                     icon: const Icon(Icons.delete_outline),
                                     onPressed: () => _delete(book),
                                   ),
@@ -257,7 +269,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _createBook,
         icon: const Icon(Icons.add),
-        label: const Text('New book'),
+        label: Text(s.newBook),
       ),
     );
   }
@@ -375,6 +387,84 @@ class _NewBookDialogState extends State<_NewBookDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(onPressed: _submit, child: const Text('Create')),
+      ],
+    );
+  }
+}
+
+class _AppSettingsDialog extends StatelessWidget {
+  const _AppSettingsDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final controller = AppSettingsScope.of(context);
+    final settings = controller.settings;
+    return AlertDialog(
+      title: Text(s.settings),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.appearance, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<AppThemeMode>(
+                initialValue: settings.themeMode,
+                decoration: InputDecoration(labelText: s.themeMode),
+                items: [
+                  DropdownMenuItem(value: AppThemeMode.system, child: Text(s.system)),
+                  DropdownMenuItem(value: AppThemeMode.light, child: Text(s.light)),
+                  DropdownMenuItem(value: AppThemeMode.dark, child: Text(s.dark)),
+                ],
+                onChanged: (v) {
+                  if (v != null) controller.update(settings.copyWith(themeMode: v));
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<AppThemeColor>(
+                initialValue: settings.themeColor,
+                decoration: InputDecoration(labelText: s.themeColor),
+                items: [
+                  for (final c in AppThemeColor.values)
+                    DropdownMenuItem(
+                      value: c,
+                      child: Row(
+                        children: [
+                          CircleAvatar(radius: 8, backgroundColor: Color(c.color)),
+                          const SizedBox(width: 8),
+                          Text(c.label),
+                        ],
+                      ),
+                    ),
+                ],
+                onChanged: (v) {
+                  if (v != null) controller.update(settings.copyWith(themeColor: v));
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: settings.localeCode,
+                decoration: InputDecoration(labelText: s.appLanguage),
+                items: [
+                  for (final l in kAppLanguages)
+                    DropdownMenuItem(
+                      value: l.code,
+                      child: Text('${l.name} — ${l.nativeName}'),
+                    ),
+                ],
+                onChanged: (v) {
+                  if (v != null) controller.update(settings.copyWith(localeCode: v));
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(s.ok)),
       ],
     );
   }

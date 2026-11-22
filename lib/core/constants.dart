@@ -77,3 +77,104 @@ const List<String> kFonts = [
   'Noto Naskh Arabic',
   'Roboto',
 ];
+
+class BookTemplate {
+  final String id;
+  final String name;
+  final String description;
+  final int background;
+  final int surface;
+  final int text;
+  final int accent;
+  final String bodyFont;
+  final String headingFont;
+  final double bodySize;
+  final double lineHeight;
+
+  const BookTemplate({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.background,
+    required this.surface,
+    required this.text,
+    required this.accent,
+    required this.bodyFont,
+    required this.headingFont,
+    required this.bodySize,
+    required this.lineHeight,
+  });
+}
+
+const List<BookTemplate> kBookTemplates = [
+  BookTemplate(
+    id: 'classic',
+    name: 'Classic',
+    description: 'Clean white pages with dark text',
+    background: 0xFFF3F4F6,
+    surface: 0xFFFFFFFF,
+    text: 0xFF111827,
+    accent: 0xFF0F766E,
+    bodyFont: 'Roboto',
+    headingFont: 'Roboto',
+    bodySize: 16,
+    lineHeight: 1.7,
+  ),
+  BookTemplate(
+    id: 'urdu_nastaliq',
+    name: 'Urdu Nastaliq',
+    description: 'Warm paper with Nastaliq typography',
+    background: 0xFFF7F1E6,
+    surface: 0xFFFFFBF4,
+    text: 0xFF2B2118,
+    accent: 0xFF8B5E34,
+    bodyFont: 'Noto Nastaliq Urdu',
+    headingFont: 'Noto Nastaliq Urdu',
+    bodySize: 20,
+    lineHeight: 2.1,
+  ),
+  BookTemplate(
+    id: 'naskh',
+    name: 'Naskh',
+    description: 'Clear Naskh for Arabic-script reading',
+    background: 0xFFF8FAFC,
+    surface: 0xFFFFFFFF,
+    text: 0xFF1F2937,
+    accent: 0xFF1D4ED8,
+    bodyFont: 'Noto Naskh Arabic',
+    headingFont: 'Noto Naskh Arabic',
+    bodySize: 18,
+    lineHeight: 1.9,
+  ),
+  BookTemplate(
+    id: 'sepia',
+    name: 'Sepia',
+    description: 'Soft sepia for long reading sessions',
+    background: 0xFFF1E4C8,
+    surface: 0xFFFDF6E3,
+    text: 0xFF3F2F1B,
+    accent: 0xFF92400E,
+    bodyFont: 'Roboto',
+    headingFont: 'Roboto',
+    bodySize: 16,
+    lineHeight: 1.8,
+  ),
+  BookTemplate(
+    id: 'night',
+    name: 'Night',
+    description: 'Dark preview with light text',
+    background: 0xFF111827,
+    surface: 0xFF1F2937,
+    text: 0xFFF9FAFB,
+    accent: 0xFF2DD4BF,
+    bodyFont: 'Roboto',
+    headingFont: 'Roboto',
+    bodySize: 16,
+    lineHeight: 1.75,
+  ),
+];
+
+BookTemplate bookTemplateById(String? id) => kBookTemplates.firstWhere(
+      (t) => t.id == id,
+      orElse: () => kBookTemplates.first,
+    );

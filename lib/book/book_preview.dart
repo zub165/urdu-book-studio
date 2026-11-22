@@ -4,7 +4,12 @@ import '../core/constants.dart';
 import '../core/text_direction.dart';
 import '../models/book.dart';
 
-Widget previewBlock(BuildContext context, Block block, String languageCode) {
+Widget previewBlock(
+  BuildContext context,
+  Block block,
+  String languageCode, {
+  BookTemplate? template,
+}) {
   final rtl = block.resolvedRtl(languageCode);
   final style = block.style;
   final heading = switch (block.type) {
@@ -19,8 +24,12 @@ Widget previewBlock(BuildContext context, Block block, String languageCode) {
     BlockType.heading3 => style.fontSize + 2,
     _ => style.fontSize,
   };
+  final defaultColor = template != null ? Color(template.text) : null;
+  final color = style.color == 0xFF000000 && defaultColor != null
+      ? defaultColor
+      : resolvedTextColor(context, style.color);
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
+    padding: EdgeInsets.symmetric(vertical: heading ? 10 : 7),
     child: Text(
       block.text.isEmpty ? ' ' : block.text,
       textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
@@ -28,11 +37,13 @@ Widget previewBlock(BuildContext context, Block block, String languageCode) {
           ? TextAlign.center
           : TextAlign.start,
       style: TextStyle(
-        fontFamily: style.fontFamily,
+        fontFamily: style.fontFamily.isNotEmpty
+            ? style.fontFamily
+            : (heading ? template?.headingFont : template?.bodyFont),
         fontSize: size,
         height: style.lineHeight,
         letterSpacing: style.letterSpacing,
-        color: resolvedTextColor(context, style.color),
+        color: color,
         fontWeight: heading || style.bold ? FontWeight.bold : FontWeight.normal,
         fontStyle: block.type == BlockType.quote || style.italic
             ? FontStyle.italic
@@ -46,29 +57,58 @@ Widget previewBlock(BuildContext context, Block block, String languageCode) {
 class ChapterPreview extends StatelessWidget {
   final Chapter chapter;
   final String languageCode;
+  final BookTemplate? template;
 
   const ChapterPreview({
     super.key,
     required this.chapter,
     required this.languageCode,
+    this.template,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tpl = template ?? bookTemplateById('classic');
     return Directionality(
-      textDirection: isRtlLanguage(languageCode) ? TextDirection.rtl : TextDirection.ltr,
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Text(
-            chapter.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+      textDirection:
+          isRtlLanguage(languageCode) ? TextDirection.rtl : TextDirection.ltr,
+      child: ColoredBox(
+        color: Color(tpl.background),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Card(
+                  color: Color(tpl.surface),
+                  elevation: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          chapter.title,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold,
+                            color: Color(tpl.text),
+                            fontFamily: tpl.headingFont,
+                          ),
+                        ),
+                        Divider(height: 32, color: Color(tpl.accent).withValues(alpha: 0.35)),
+                        for (final block in chapter.blocks)
+                          previewBlock(context, block, languageCode, template: tpl),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const Divider(height: 32),
-          for (final block in chapter.blocks)
-            previewBlock(context, block, languageCode),
-        ],
+        ),
       ),
     );
   }
@@ -81,64 +121,82 @@ class BookPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final tpl = bookTemplateById(book.templateId);
     final rtl = book.isRtl;
     return Directionality(
       textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-      child: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Card(
-            color: scheme.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(28),
-              child: Column(
-                children: [
-                  Text(
-                    book.title.isEmpty ? 'Untitled book' : book.title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: defaultStyleFor(book.languageCode).fontFamily,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: scheme.onPrimaryContainer,
+      child: ColoredBox(
+        color: Color(tpl.background),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 860),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Card(
+                  color: Color(tpl.accent).withValues(alpha: 0.12),
+                  elevation: 0,
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      children: [
+                        Text(
+                          book.title.isEmpty ? 'Untitled book' : book.title,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: tpl.headingFont,
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                            color: Color(tpl.text),
+                          ),
+                        ),
+                        if (book.author.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            book.author,
+                            style: TextStyle(
+                              color: Color(tpl.text).withValues(alpha: 0.8),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                  if (book.author.isNotEmpty)
-                    Text(
-                      book.author,
-                      style: TextStyle(color: scheme.onPrimaryContainer),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          for (final chapter in book.chapters) ...[
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      chapter.title,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 16),
+                for (final chapter in book.chapters) ...[
+                  Card(
+                    color: Color(tpl.surface),
+                    elevation: 0,
+                    child: Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            chapter.title,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Color(tpl.text),
+                              fontFamily: tpl.headingFont,
+                            ),
+                          ),
+                          Divider(height: 28, color: Color(tpl.accent).withValues(alpha: 0.35)),
+                          for (final block in chapter.blocks)
+                            previewBlock(context, block, book.languageCode, template: tpl),
+                        ],
                       ),
                     ),
-                    const Divider(height: 24),
-                    for (final block in chapter.blocks)
-                      previewBlock(context, block, book.languageCode),
-                  ],
-                ),
-              ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ],
             ),
-            const SizedBox(height: 12),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

@@ -153,6 +153,7 @@ class Book {
   String title;
   String author;
   String languageCode;
+  String templateId;
   final DateTime createdAt;
   DateTime updatedAt;
   final List<Chapter> chapters;
@@ -162,6 +163,7 @@ class Book {
     required this.title,
     required this.author,
     required this.languageCode,
+    this.templateId = 'classic',
     required this.createdAt,
     required this.updatedAt,
     required this.chapters,
@@ -178,6 +180,7 @@ class Book {
       title: title,
       author: author,
       languageCode: languageCode,
+      templateId: isRtlLanguage(languageCode) ? 'urdu_nastaliq' : 'classic',
       createdAt: now,
       updatedAt: now,
       chapters: [
@@ -196,6 +199,7 @@ class Book {
         'title': title,
         'author': author,
         'languageCode': languageCode,
+        'templateId': templateId,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
         'chapters': chapters.map((c) => c.toJson()).toList(),
@@ -206,6 +210,7 @@ class Book {
         title: j['title'] as String? ?? '',
         author: j['author'] as String? ?? '',
         languageCode: j['languageCode'] as String? ?? 'ur',
+        templateId: j['templateId'] as String? ?? 'classic',
         createdAt: DateTime.parse(j['createdAt'] as String),
         updatedAt: DateTime.parse(j['updatedAt'] as String),
         chapters: (j['chapters'] as List<dynamic>? ?? [])

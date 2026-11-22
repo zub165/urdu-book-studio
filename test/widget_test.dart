@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:urdu_book_studio/editor/chapter_editor.dart';
 import 'package:urdu_book_studio/main.dart';
 import 'package:urdu_book_studio/models/book.dart';
+import 'package:urdu_book_studio/services/app_settings.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +15,9 @@ void main() {
   });
 
   testWidgets('library screen starts empty', (WidgetTester tester) async {
-    await tester.pumpWidget(const UrduBookStudioApp());
+    await tester.pumpWidget(UrduBookStudioApp(
+      controller: AppSettingsController(const AppSettings()),
+    ));
     await tester.pumpAndSettle();
 
     expect(
@@ -60,7 +63,9 @@ void main() {
   });
 
   testWidgets('can create a book and open the editor', (WidgetTester tester) async {
-    await tester.pumpWidget(const UrduBookStudioApp());
+    await tester.pumpWidget(UrduBookStudioApp(
+      controller: AppSettingsController(const AppSettings()),
+    ));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('New book'));

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/app_localizations.dart';
+import 'core/app_strings.dart';
 import 'library/library_screen.dart';
+import 'services/app_settings.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   ErrorWidget.builder = (details) => MaterialApp(
         home: Scaffold(
           backgroundColor: Colors.red.shade900,
@@ -33,29 +38,51 @@ void main() {
           ),
         ),
       );
-  runApp(const UrduBookStudioApp());
+  final settings = await AppSettingsStore().load();
+  runApp(UrduBookStudioApp(controller: AppSettingsController(settings)));
 }
 
 class UrduBookStudioApp extends StatelessWidget {
-  const UrduBookStudioApp({super.key});
+  final AppSettingsController controller;
+  const UrduBookStudioApp({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Urdu Book Studio',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF0F766E),
-        brightness: Brightness.light,
+    return AppSettingsScope(
+      controller: controller,
+      child: AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) {
+          final settings = controller.settings;
+          final seed = Color(settings.themeColor.color);
+          return MaterialApp(
+            title: 'Urdu Book Studio',
+            debugShowCheckedModeBanner: false,
+            locale: settings.locale,
+            supportedLocales: [
+              for (final code in AppStrings.supported) Locale(code),
+            ],
+            localizationsDelegates: const [
+              AppStringsDelegate(),
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: ThemeData(
+              useMaterial3: true,
+              colorSchemeSeed: seed,
+              brightness: Brightness.light,
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              colorSchemeSeed: seed,
+              brightness: Brightness.dark,
+            ),
+            themeMode: settings.flutterThemeMode,
+            home: const LibraryScreen(),
+          );
+        },
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF0F766E),
-        brightness: Brightness.dark,
-      ),
-      themeMode: ThemeMode.system,
-      home: const LibraryScreen(),
     );
   }
 }

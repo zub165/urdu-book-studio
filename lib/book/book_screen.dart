@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../core/constants.dart';
 import '../editor/chapter_editor.dart';
 import '../export/exporter.dart';
 import '../models/book.dart';
@@ -146,6 +147,27 @@ class _BookScreenState extends State<BookScreen> {
       appBar: AppBar(
         title: Text(book.title.isEmpty ? 'Untitled book' : book.title),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Book template',
+            icon: const Icon(Icons.palette_outlined),
+            onSelected: (id) {
+              book.templateId = id;
+              _changed();
+            },
+            itemBuilder: (_) => [
+              for (final t in kBookTemplates)
+                PopupMenuItem(
+                  value: t.id,
+                  child: Row(
+                    children: [
+                      if (t.id == book.templateId) const Icon(Icons.check, size: 18),
+                      if (t.id == book.templateId) const SizedBox(width: 8),
+                      Text(t.name),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             tooltip: _preview ? 'Back to chapters' : 'Preview book',
             icon: Icon(_preview ? Icons.edit_note : Icons.visibility),

@@ -3,17 +3,19 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum AiProvider { gemini, openai }
+enum AiProvider { gemini, openai, backend }
 
 extension AiProviderLabel on AiProvider {
   String get label => switch (this) {
         AiProvider.gemini => 'Google Gemini',
         AiProvider.openai => 'OpenAI',
+        AiProvider.backend => 'GoDaddy ML Backend',
       };
 
   String get defaultModel => switch (this) {
         AiProvider.gemini => 'gemini-2.5-flash',
         AiProvider.openai => 'gpt-4o-mini',
+        AiProvider.backend => 'default',
       };
 }
 
@@ -21,30 +23,38 @@ class AiSettings {
   final AiProvider provider;
   final String apiKey;
   final String model;
+  final String backendUrl;
 
   const AiSettings({
     this.provider = AiProvider.gemini,
     this.apiKey = '',
     this.model = 'gemini-2.5-flash',
+    this.backendUrl = '',
   });
 
-  bool get isConfigured => apiKey.trim().isNotEmpty;
+  bool get isConfigured => switch (provider) {
+        AiProvider.backend => backendUrl.trim().isNotEmpty,
+        _ => apiKey.trim().isNotEmpty,
+      };
 
   AiSettings copyWith({
     AiProvider? provider,
     String? apiKey,
     String? model,
+    String? backendUrl,
   }) =>
       AiSettings(
         provider: provider ?? this.provider,
         apiKey: apiKey ?? this.apiKey,
         model: model ?? this.model,
+        backendUrl: backendUrl ?? this.backendUrl,
       );
 
   Map<String, dynamic> toJson() => {
         'provider': provider.name,
         'apiKey': apiKey,
         'model': model,
+        'backendUrl': backendUrl,
       };
 
   factory AiSettings.fromJson(Map<String, dynamic> json) {
@@ -56,6 +66,7 @@ class AiSettings {
       provider: provider,
       apiKey: json['apiKey'] as String? ?? '',
       model: json['model'] as String? ?? provider.defaultModel,
+      backendUrl: json['backendUrl'] as String? ?? '',
     );
   }
 }
@@ -135,23 +146,33 @@ class AiService {
 
   Future<String> generate(String prompt, AiSettings settings) async {
     if (!settings.isConfigured) {
-      throw const AiException('Add an API key in AI settings first.');
+      throw AiException(settings.provider == AiProvider.backend
+          ? 'Set the GoDaddy ML backend URL in AI settings first.'
+          : 'Add an API key in AI settings first.');
     }
     final response = switch (settings.provider) {
       AiProvider.gemini => await _gemini(prompt, settings),
       AiProvider.openai => await _openai(prompt, settings),
+      AiProvider.backend => await _backend(prompt, settings),
     };
-    if (response.statusCode != 200) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AiException(_errorFrom(response.body) ??
           'AI request failed (${response.statusCode}).');
     }
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final text = switch (settings.provider) {
-      AiProvider.gemini => _geminiText(decoded),
-      AiProvider.openai => _openaiText(decoded),
-    };
+    final text = settings.provider == AiProvider.backend
+        ? _backendText(response.body)
+        : _jsonProviderText(response.body, settings.provider);
     if (text.trim().isEmpty) throw const AiException('AI returned no text.');
     return text.trim();
+  }
+
+  String _jsonProviderText(String body, AiProvider provider) {
+    final decoded = jsonDecode(body) as Map<String, dynamic>;
+    return switch (provider) {
+      AiProvider.gemini => _geminiText(decoded),
+      AiProvider.openai => _openaiText(decoded),
+      AiProvider.backend => _backendText(body),
+    };
   }
 
   Future<http.Response> _gemini(String prompt, AiSettings settings) {
@@ -189,6 +210,82 @@ class AiService {
           'temperature': 0.2,
         }),
       );
+
+  Future<http.Response> _backend(String prompt, AiSettings settings) {
+    final base = settings.backendUrl.trim();
+    final uri = Uri.parse(base);
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (settings.apiKey.trim().isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${settings.apiKey.trim()}';
+    }
+    return _client.post(
+      uri,
+      headers: headers,
+      body: jsonEncode({
+        'prompt': prompt,
+        'text': prompt,
+        'model': settings.model,
+        'turns': [
+          {'role': 'user', 'content': prompt}
+        ],
+        'messages': [
+          {'role': 'user', 'content': prompt}
+        ],
+      }),
+    );
+  }
+
+  String _backendText(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is String) return decoded;
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message'];
+        if (message is Map<String, dynamic>) {
+          final content = message['content'];
+          if (content is String && content.trim().isNotEmpty) return content;
+        }
+        for (final key in [
+          'text',
+          'output',
+          'result',
+          'response',
+          'generated_text',
+          'translation',
+          'reply',
+          'answer',
+          'message_text',
+        ]) {
+          final value = decoded[key];
+          if (value is String && value.trim().isNotEmpty) return value;
+        }
+        final data = decoded['data'];
+        if (data is String && data.trim().isNotEmpty) return data;
+        if (data is Map<String, dynamic>) {
+          for (final key in ['text', 'output', 'result', 'response', 'reply', 'answer']) {
+            final value = data[key];
+            if (value is String && value.trim().isNotEmpty) return value;
+          }
+        }
+        final choices = decoded['choices'];
+        if (choices is List && choices.isNotEmpty) {
+          final first = choices.first;
+          if (first is Map<String, dynamic>) {
+            final choiceMessage = first['message'];
+            if (choiceMessage is Map<String, dynamic>) {
+              final content = choiceMessage['content'];
+              if (content is String) return content;
+            }
+            final text = first['text'];
+            if (text is String) return text;
+          }
+        }
+      }
+    } catch (_) {
+      return body;
+    }
+    return body;
+  }
 
   String _geminiText(Map<String, dynamic> decoded) {
     final candidates = decoded['candidates'] as List<dynamic>? ?? const [];
