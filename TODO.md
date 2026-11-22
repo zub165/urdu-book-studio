@@ -1,6 +1,7 @@
 # Urdu Book Studio / Book Writer & Publisher - TODO
 
 ## Reported bugs / urgent
+- [ ] **ML Backend / GoDaddy AI not working when selected**: debug end-to-end. Verify AI settings save/load, provider selection persists, backend URL validation, CORS for web, HTTPS/mixed-content, auth token header, response parsing for multi-model `/api/chat` (`reply`) and Ollama `/api/generate`/`api/chat`, timeout/error messages shown in UI, and test against live exposed endpoint. Add in-app "Test connection" button and clearer failure reason.
 - [ ] **Urdu vowel input / on-screen keyboard**: Pressing `P` or physical keyboard mappings may not produce expected Urdu vowels depending on OS/input method. Add a side Urdu keyboard/character palette in editor for tap-to-insert vowels and common characters; ideally insert at cursor position.
 - [ ] **Isolated character paragraph breaks** (e.g. single `ر` on its own line): add review/repair flow - compare with surrounding text, Join with previous/next, Undo. Detect suspicious one-character/very-short blocks.
 - [ ] **Chapter names in sidebar**: show book title once; list chapters by number + own title; unnamed chapters show `باب ۱`/`Chapter 1`; allow rename in list; highlight open chapter; ensure names come from Book Details/chapter metadata, not repeated book title.
