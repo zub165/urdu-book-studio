@@ -50,6 +50,8 @@ class _ChapterEditorState extends State<ChapterEditor>
   AiSettings _aiSettings = const AiSettings();
   final List<List<Map<String, dynamic>>> _undo = [];
   final List<List<Map<String, dynamic>>> _redo = [];
+  final Map<String, TextEditingController> _controllers = {};
+  bool _showUrduKeyboard = false;
 
   @override
   void initState() {
@@ -61,8 +63,15 @@ class _ChapterEditorState extends State<ChapterEditor>
     });
   }
 
+  TextEditingController _controllerFor(Block block) {
+    final c = _controllers.putIfAbsent(block.id, () => TextEditingController(text: block.text));
+    if (c.text != block.text) c.value = c.value.copyWith(text: block.text, selection: TextSelection.collapsed(offset: block.text.length), composing: TextRange.empty);
+    return c;
+  }
+
   @override
   void dispose() {
+    for (final c in _controllers.values) { c.dispose(); }
     _tabs.dispose();
     super.dispose();
   }
@@ -323,6 +332,7 @@ class _ChapterEditorState extends State<ChapterEditor>
             onPressed: _redo.isNotEmpty ? _redoChange : null,
           ),
           IconButton(tooltip: 'Save now', icon: const Icon(Icons.save_outlined), onPressed: () { widget.onChanged(); setState(()=>_saveStatus='Saved'); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved'))); }),
+          IconButton(tooltip: 'Urdu keyboard', icon: Icon(_showUrduKeyboard ? Icons.keyboard_hide : Icons.keyboard), onPressed: () => setState(()=>_showUrduKeyboard=!_showUrduKeyboard)),
           PopupMenuButton<BlockType>(
             tooltip: 'Set block type / heading',
             icon: const Icon(Icons.title),
@@ -483,30 +493,83 @@ class _ChapterEditorState extends State<ChapterEditor>
         ),
         Divider(height: 1, color: scheme.outlineVariant),
         Expanded(
-          child: blocks.isEmpty
+          child: Column(children: [
+            Expanded(child: blocks.isEmpty
               ? const Center(child: Text('Tap + to add a paragraph.'))
-              : _continuousView
-                  ? _buildContinuousView(blocks)
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: blocks.length,
-                      itemBuilder: (context, i) => _BlockTile(
-                        key: ValueKey('${blocks[i].id}_$_revision'),
-                        block: blocks[i],
-                        languageCode: _languageCode,
-                        selected: _activeIndex == i,
-                        checked: _selected.contains(i),
-                        selectMode: _selectMode,
-                        onFocus: () => setState(() => _activeIndex = i),
-                        onToggleSelect: () => _toggleSelect(i),
-                        onBeforeChange: _record,
-                        onChanged: _touch,
-                        onDelete: () => _deleteBlock(i),
-                        onJoinPrevious: i == 0 ? null : () { _record(); _chapter.blocks[i - 1].text = '${_chapter.blocks[i - 1].text}\n${blocks[i].text}'.trim(); _chapter.blocks.removeAt(i); _activeIndex = i - 1; _touch(); },
-                      ),
-                    ),
+              : _continuousView ? _buildContinuousView(blocks)
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: blocks.length,
+                  itemBuilder: (context, i) => _BlockTile(
+                    key: ValueKey('${blocks[i].id}_$_revision'),
+                    block: blocks[i],
+                    languageCode: _languageCode,
+                    selected: _activeIndex == i,
+                    checked: _selected.contains(i),
+                    selectMode: _selectMode,
+                    controller: _controllerFor(blocks[i]),
+                    onFocus: () => setState(() => _activeIndex = i),
+                    onToggleSelect: () => _toggleSelect(i),
+                    onBeforeChange: _record,
+                    onChanged: _touch,
+                    onDelete: () => _deleteBlock(i),
+                    onJoinPrevious: i == 0 ? null : () { _record(); _chapter.blocks[i - 1].text = '${_chapter.blocks[i - 1].text}\n${blocks[i].text}'.trim(); _chapter.blocks.removeAt(i); _activeIndex = i - 1; _touch(); },
+                  ),
+                )),
+            if (_showUrduKeyboard) _buildUrduKeyboard(),
+          ]),
         ),
       ],
+    );
+  }
+
+
+  void _insertAtCursor(String text) {
+    final idx = _activeIndex ?? ( _chapter.blocks.isNotEmpty ? 0 : -1);
+    if (idx < 0 || idx >= _chapter.blocks.length) return;
+    final block = _chapter.blocks[idx];
+    final c = _controllerFor(block);
+    final sel = c.selection;
+    final start = sel.start >= 0 ? sel.start : c.text.length;
+    final end = sel.end >= 0 ? sel.end : c.text.length;
+    final next = c.text.replaceRange(start, end, text);
+    _record();
+    block.text = next;
+    c.value = TextEditingValue(text: next, selection: TextSelection.collapsed(offset: start + text.length));
+    _touch();
+  }
+
+  Widget _buildUrduKeyboard() {
+    const keys = ['آ','ا','ب','پ','ت','ٹ','ث','ج','چ','ح','خ','د','ڈ','ذ','ر','ڑ','ز','ژ','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ک','گ','ل','م','ن','ں','و','ؤ','ہ','ۂ','ھ','ء','ی','ئ','ے','ۃ','ً','ٌ','ٍ','َ','ُ','ِ','ّ','ْ','ٗ','ٔ','۔','،','؟','!',' ', '⌫'];
+    return Material(
+      elevation: 4,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children:[const Icon(Icons.keyboard), const SizedBox(width:8), const Text('Urdu keyboard'), const Spacer(), IconButton(onPressed: ()=>setState(()=>_showUrduKeyboard=false), icon: const Icon(Icons.close))]),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final k in keys)
+              ActionChip(
+                label: Text(k == ' ' ? 'Space' : k),
+                onPressed: () {
+                  if (k == '⌫') {
+                    final idx = _activeIndex ?? 0;
+                    if (idx < 0 || idx >= _chapter.blocks.length) return;
+                    final c = _controllerFor(_chapter.blocks[idx]);
+                    final sel = c.selection; final start = sel.start >= 0 ? sel.start : c.text.length; final end = sel.end >= 0 ? sel.end : c.text.length;
+                    if (start == 0 && end == 0) return;
+                    final s0 = start == end ? start - 1 : start;
+                    final next = c.text.replaceRange(s0, end, '');
+                    _record(); _chapter.blocks[idx].text = next; c.value = TextEditingValue(text: next, selection: TextSelection.collapsed(offset: s0)); _touch();
+                    return;
+                  }
+                  _insertAtCursor(k == ' ' ? ' ' : k);
+                },
+              ),
+          ]),
+        ]),
+      ),
     );
   }
 
@@ -569,11 +632,10 @@ class _ChapterEditorState extends State<ChapterEditor>
           }
           return KeyEventResult.ignored;
         },
-        child: TextFormField(
-          key: ValueKey('${block.id}_$_revision'),
-          initialValue: block.text,
+        child: TextField(
+          controller: _controllerFor(block),
           onTap: () => setState(() => _activeIndex = index),
-          onChanged: (v) { _record(); block.text = v; _touch(); },
+          onChanged: (v) { if (block.text == v) return; _record(); block.text = v; _touch(); },
           maxLines: null,
           textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
           textAlign: block.type == BlockType.centered ? TextAlign.center : (rtl ? TextAlign.right : TextAlign.left),
@@ -1034,6 +1096,7 @@ class _BlockTile extends StatelessWidget {
   final bool selected;
   final bool checked;
   final bool selectMode;
+  final TextEditingController controller;
   final VoidCallback onFocus;
   final VoidCallback onToggleSelect;
   final VoidCallback onBeforeChange;
@@ -1048,6 +1111,7 @@ class _BlockTile extends StatelessWidget {
     required this.selected,
     required this.checked,
     required this.selectMode,
+    required this.controller,
     required this.onFocus,
     required this.onToggleSelect,
     required this.onBeforeChange,
@@ -1130,10 +1194,10 @@ class _BlockTile extends StatelessWidget {
               IconButton(tooltip:'Delete block', icon: const Icon(Icons.delete_outline), onPressed:onDelete),
             ],
           ),
-          TextFormField(
-            initialValue: block.text,
+          TextField(
+            controller: controller,
             onTap: selectMode ? onToggleSelect : onFocus,
-            onChanged: (v) { onBeforeChange(); block.text = v; onChanged(); },
+            onChanged: (v) { if (block.text == v) return; onBeforeChange(); block.text = v; onChanged(); },
             maxLines: null,
             textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
             textAlign: block.type == BlockType.centered ? TextAlign.center : (rtl ? TextAlign.right : TextAlign.left),
