@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../book/book_preview.dart';
 import '../core/constants.dart';
@@ -42,6 +43,7 @@ class _ChapterEditorState extends State<ChapterEditor>
   int? _activeIndex;
   final Set<int> _selected = <int>{};
   bool _selectMode = false;
+  bool _continuousView = true;
   int _revision = 0;
   AiSettings _aiSettings = const AiSettings();
   final List<List<Map<String, dynamic>>> _undo = [];
@@ -311,13 +313,16 @@ class _ChapterEditorState extends State<ChapterEditor>
             onPressed: _redo.isNotEmpty ? _redoChange : null,
           ),
           IconButton(
-            tooltip: _selectMode ? 'Exit select mode' : 'Select blocks',
-            icon: Icon(_selectMode ? Icons.checklist_rtl : Icons.checklist),
-            onPressed: () => setState(() {
-              _selectMode = !_selectMode;
-              if (!_selectMode) _selected.clear();
-            }),
+            tooltip: _continuousView ? 'Block edit view' : 'Continuous writing view',
+            icon: Icon(_continuousView ? Icons.view_agenda_outlined : Icons.article_outlined),
+            onPressed: () => setState(() { _continuousView = !_continuousView; _selectMode = false; _selected.clear(); }),
           ),
+          if (!_continuousView)
+            IconButton(
+              tooltip: _selectMode ? 'Exit select mode' : 'Select blocks',
+              icon: Icon(_selectMode ? Icons.checklist_rtl : Icons.checklist),
+              onPressed: () => setState(() { _selectMode = !_selectMode; if (!_selectMode) _selected.clear(); }),
+            ),
           IconButton(
             tooltip: 'Find and replace',
             icon: const Icon(Icons.search),
@@ -423,11 +428,8 @@ class _ChapterEditorState extends State<ChapterEditor>
                       icon: const Icon(Icons.format_paint_outlined),
                       label: const Text('Apply to all blocks'),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: blocks.isEmpty ? null : _selectAll,
-                      icon: const Icon(Icons.select_all),
-                      label: const Text('Select all'),
-                    ),
+                    if (!_continuousView)
+                      OutlinedButton.icon(onPressed: blocks.isEmpty ? null : _selectAll, icon: const Icon(Icons.select_all), label: const Text('Select all')),
                     if (_selectMode || _selected.isNotEmpty)
                       OutlinedButton.icon(
                         onPressed: _clearSelection,
@@ -452,25 +454,106 @@ class _ChapterEditorState extends State<ChapterEditor>
         Expanded(
           child: blocks.isEmpty
               ? const Center(child: Text('Tap + to add a paragraph.'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: blocks.length,
-                  itemBuilder: (context, i) => _BlockTile(
-                    key: ValueKey('${blocks[i].id}_$_revision'),
-                    block: blocks[i],
-                    languageCode: _languageCode,
-                    selected: _activeIndex == i,
-                    checked: _selected.contains(i),
-                    selectMode: _selectMode,
-                    onFocus: () => setState(() => _activeIndex = i),
-                    onToggleSelect: () => _toggleSelect(i),
-                    onBeforeChange: _record,
-                    onChanged: _touch,
-                    onDelete: () => _deleteBlock(i),
-                  ),
-                ),
+              : _continuousView
+                  ? _buildContinuousView(blocks)
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: blocks.length,
+                      itemBuilder: (context, i) => _BlockTile(
+                        key: ValueKey('${blocks[i].id}_$_revision'),
+                        block: blocks[i],
+                        languageCode: _languageCode,
+                        selected: _activeIndex == i,
+                        checked: _selected.contains(i),
+                        selectMode: _selectMode,
+                        onFocus: () => setState(() => _activeIndex = i),
+                        onToggleSelect: () => _toggleSelect(i),
+                        onBeforeChange: _record,
+                        onChanged: _touch,
+                        onDelete: () => _deleteBlock(i),
+                      ),
+                    ),
         ),
       ],
+    );
+  }
+
+  Widget _buildContinuousView(List<Block> blocks) {
+    final template = bookTemplateById(widget.book.templateId);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 860),
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Card(
+              color: Color(template.surface),
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  for (var i = 0; i < blocks.length; i++) _continuousBlock(blocks[i], i, template),
+                ]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _continuousBlock(Block block, int index, BookTemplate template) {
+    final rtl = block.resolvedRtl(_languageCode);
+    final s = block.style;
+    final isHeading = block.type == BlockType.heading1 || block.type == BlockType.heading2 || block.type == BlockType.heading3;
+    final size = switch (block.type) { BlockType.heading1 => s.fontSize+8, BlockType.heading2 => s.fontSize+5, BlockType.heading3 => s.fontSize+2, _ => s.fontSize };
+    final style = TextStyle(
+      fontFamily: s.fontFamily.isNotEmpty ? s.fontFamily : (isHeading ? template.headingFont : template.bodyFont),
+      fontSize: size, height: s.lineHeight, letterSpacing: s.letterSpacing,
+      fontWeight: isHeading || s.bold ? FontWeight.bold : FontWeight.normal,
+      fontStyle: block.type == BlockType.quote || s.italic ? FontStyle.italic : FontStyle.normal,
+      decoration: s.underline ? TextDecoration.underline : TextDecoration.none,
+      color: s.color == 0xFF000000 ? Color(template.text) : resolvedTextColor(context, s.color),
+    );
+    return Padding(
+      padding: EdgeInsets.only(bottom: block.paragraphSpacing),
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (event is! KeyDownEvent) return KeyEventResult.ignored;
+          if (event.logicalKey == LogicalKeyboardKey.enter && !HardwareKeyboard.instance.isShiftPressed) {
+            _record();
+            final insert = index + 1;
+            _chapter.blocks.insert(insert, Block(type: BlockType.paragraph, rtl: block.rtl, paragraphSpacing: block.paragraphSpacing, style: block.style.copyWith()));
+            _activeIndex = insert;
+            _touch();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.backspace && block.text.isEmpty && index > 0) {
+            _record();
+            _chapter.blocks.removeAt(index);
+            _activeIndex = index - 1;
+            _touch();
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: TextFormField(
+          key: ValueKey('${block.id}_$_revision'),
+          initialValue: block.text,
+          onTap: () => setState(() => _activeIndex = index),
+          onChanged: (v) { _record(); block.text = v; _touch(); },
+          maxLines: null,
+          textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+          textAlign: block.type == BlockType.centered ? TextAlign.center : (rtl ? TextAlign.right : TextAlign.left),
+          style: style,
+          decoration: InputDecoration(
+            isDense: true,
+            border: InputBorder.none,
+            hintText: index == 0 ? 'Write here...' : '',
+            contentPadding: EdgeInsets.symmetric(vertical: isHeading ? 8 : 2),
+          ),
+        ),
+      ),
     );
   }
 
@@ -546,34 +629,24 @@ class _ChapterEditorState extends State<ChapterEditor>
                 ),
                 const SizedBox(height: 12),
                 if (block == null && _selected.isEmpty)
-                  const Text(
-                    'Tap a paragraph in Write, or use Select blocks to change multiple blocks at once.',
-                  )
+                  const Text('Tap a paragraph in Write to format it. Use top toolbar to switch between Continuous and Block edit view.')
                 else ...[
-                  if (_selected.isNotEmpty)
-                    Text('${_selected.length} blocks selected')
-                  else ...[
-                    DropdownButtonFormField<BlockType>(
-                      initialValue: block!.type,
-                      decoration: const InputDecoration(labelText: 'Block type'),
-                      items: [
-                        for (final type in BlockType.values)
-                          DropdownMenuItem(value: type, child: Text(type.label)),
-                      ],
-                      onChanged: (type) {
-                        if (type == null) return;
-                        _record();
-                        block.type = type;
-                        _touch();
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
-                      title: const Text('Right to left paragraph'),
-                      value: block.resolvedRtl(_languageCode),
-                      onChanged: (_) => _flipDirection(),
-                    ),
-                  ],
+                  if (_selected.isNotEmpty) Text('${_selected.length} blocks selected'),
+                  DropdownButtonFormField<BlockType>(
+                    initialValue: (block ?? _chapter.blocks.first).type,
+                    decoration: const InputDecoration(labelText: 'Block type'),
+                    items: [for (final type in BlockType.values) DropdownMenuItem(value: type, child: Text(type.label))],
+                    onChanged: (type) { if (type == null) return; _record(); for (final i in _targetIndexes) { _chapter.blocks[i].type = type; } _touch(); },
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<bool?>(
+                    initialValue: block?.rtl,
+                    decoration: const InputDecoration(labelText: 'Paragraph direction'),
+                    items: const [DropdownMenuItem(value: null, child: Text('Auto (book language)')), DropdownMenuItem(value: true, child: Text('Right to left')), DropdownMenuItem(value: false, child: Text('Left to right'))],
+                    onChanged: (v) { _record(); for (final i in _targetIndexes) { _chapter.blocks[i].rtl = v; } _touch(); },
+                  ),
+                  const SizedBox(height: 8),
+                  Row(children:[const Text('Paragraph spacing'), Expanded(child: Slider(value: (block?.paragraphSpacing ?? 8).clamp(0,32), min:0, max:32, divisions:16, onChanged: (v){ _record(); for (final i in _targetIndexes) { _chapter.blocks[i].paragraphSpacing = v; } _touch(); })), Text('${(block?.paragraphSpacing ?? 8).round()} pt')]),
                   const Divider(height: 24),
                   FontToolbar(style: targetStyle, onChanged: _applyStyle),
                 ],
