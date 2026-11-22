@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
@@ -82,6 +83,8 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
                   helperText: 'HTTPS endpoint required for web (CORS enabled). e.g. https://example.com/api/chat',
                 ),
               ),
+            if (_provider == AiProvider.backend && kIsWeb && _backendUrl.text.trim().startsWith('http://'))
+              Padding(padding: const EdgeInsets.only(top: 6), child: Text('Web builds cannot call HTTP/private endpoints. Use HTTPS with CORS.', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))),
             if (_provider == AiProvider.backend) const SizedBox(height: 8),
             if (_provider == AiProvider.backend)
               Row(children: [
