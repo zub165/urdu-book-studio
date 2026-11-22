@@ -3,19 +3,19 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum AiProvider { gemini, openai, backend }
+enum AiProvider { gemini, openai, ollama }
 
 extension AiProviderLabel on AiProvider {
   String get label => switch (this) {
         AiProvider.gemini => 'Google Gemini',
         AiProvider.openai => 'OpenAI',
-        AiProvider.backend => 'GoDaddy ML Backend',
+        AiProvider.ollama => 'Ollama',
       };
 
   String get defaultModel => switch (this) {
         AiProvider.gemini => 'gemini-2.5-flash',
         AiProvider.openai => 'gpt-4o-mini',
-        AiProvider.backend => 'default',
+        AiProvider.ollama => 'llama3.2',
       };
 }
 
@@ -33,7 +33,7 @@ class AiSettings {
   });
 
   bool get isConfigured => switch (provider) {
-        AiProvider.backend => backendUrl.trim().isNotEmpty,
+        AiProvider.ollama => backendUrl.trim().isNotEmpty,
         _ => apiKey.trim().isNotEmpty,
       };
 
@@ -146,29 +146,29 @@ class AiService {
 
   Future<String> generate(String prompt, AiSettings settings) async {
     if (!settings.isConfigured) {
-      throw AiException(settings.provider == AiProvider.backend
-          ? 'Set the GoDaddy ML backend URL in AI settings first.'
+      throw AiException(settings.provider == AiProvider.ollama
+          ? 'Set the Ollama server URL in AI settings first (e.g. http://localhost:11434).'
           : 'Add an API key in AI settings first.');
     }
     try {
       final response = switch (settings.provider) {
         AiProvider.gemini => await _gemini(prompt, settings),
         AiProvider.openai => await _openai(prompt, settings),
-        AiProvider.backend => await _backend(prompt, settings),
+        AiProvider.ollama => await _ollama(prompt, settings),
       };
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw AiException(_errorFrom(response.body) ?? 'AI request failed (${response.statusCode}).');
       }
-      final text = settings.provider == AiProvider.backend
-          ? _backendText(response.body)
+      final text = settings.provider == AiProvider.ollama
+          ? _ollamaText(response.body)
           : _jsonProviderText(response.body, settings.provider);
       if (text.trim().isEmpty) throw const AiException('AI returned no text.');
       return text.trim();
     } catch (e) {
       if (e is AiException) rethrow;
       final msg = e.toString();
-      if (settings.provider == AiProvider.backend && (msg.contains('Failed to fetch') || msg.contains('XMLHttpRequest') || msg.contains('SocketException'))) {
-        throw AiException('Cannot reach backend. For GitHub Pages/web use a public HTTPS URL with CORS enabled; HTTP/private endpoints are blocked by browsers. Original: $msg');
+      if (settings.provider == AiProvider.ollama && (msg.contains('Failed to fetch') || msg.contains('XMLHttpRequest') || msg.contains('SocketException') || msg.contains('Connection refused'))) {
+        throw AiException('Cannot reach Ollama. Make sure Ollama is running and URL is correct (default http://localhost:11434). For web/GitHub Pages, Ollama must be exposed via public HTTPS with CORS. Original: $msg');
       }
       throw AiException('AI request failed: $msg');
     }
@@ -179,7 +179,7 @@ class AiService {
     return switch (provider) {
       AiProvider.gemini => _geminiText(decoded),
       AiProvider.openai => _openaiText(decoded),
-      AiProvider.backend => _backendText(body),
+      AiProvider.ollama => _ollamaText(body),
     };
   }
 
@@ -219,38 +219,30 @@ class AiService {
         }),
       );
 
-  Future<http.Response> _backend(String prompt, AiSettings settings) async {
-    final base = settings.backendUrl.trim();
-    var uri = Uri.parse(base);
+  Future<http.Response> _ollama(String prompt, AiSettings settings) async {
+    final base = settings.backendUrl.trim().replaceAll(RegExp(r'/+$'), '');
     final headers = <String, String>{'Content-Type': 'application/json'};
     final key = settings.apiKey.trim();
-    if (key.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $key';
-      headers['X-API-Key'] = key;
-    }
-    final body = jsonEncode({
-      'prompt': prompt,
-      'text': prompt,
-      'model': settings.model,
-      'turns': [{'role': 'user', 'content': prompt}],
+    if (key.isNotEmpty) headers['Authorization'] = 'Bearer $key';
+    final model = settings.model.trim().isEmpty ? 'llama3.2' : settings.model.trim();
+    final chatUri = Uri.parse(base.endsWith('/api/chat') ? base : '$base/api/chat');
+    var response = await _client.post(chatUri, headers: headers, body: jsonEncode({
+      'model': model,
       'messages': [{'role': 'user', 'content': prompt}],
-    });
-    var response = await _client.post(uri, headers: headers, body: body).timeout(const Duration(seconds: 30));
+      'stream': false,
+    })).timeout(const Duration(seconds: 60));
     if (response.statusCode == 404) {
-      final path = uri.path;
-      if (path.isEmpty || path == '/' || path.endsWith('/generate')) {
-        final altPath = path.endsWith('/generate') ? path.replaceFirst(RegExp(r'/generate$'), '/chat') : '${path.endsWith('/') ? path.substring(0, path.length - 1) : path}/api/chat';
-        final alt = uri.replace(path: altPath.startsWith('/') ? altPath : '/$altPath');
-        response = await _client.post(alt, headers: headers, body: body).timeout(const Duration(seconds: 30));
-      } else if (!path.endsWith('/api/chat')) {
-        final alt = uri.replace(path: '/api/chat');
-        response = await _client.post(alt, headers: headers, body: body).timeout(const Duration(seconds: 30));
-      }
+      final genUri = Uri.parse(base.endsWith('/api/generate') ? base : '$base/api/generate');
+      response = await _client.post(genUri, headers: headers, body: jsonEncode({
+        'model': model,
+        'prompt': prompt,
+        'stream': false,
+      })).timeout(const Duration(seconds: 60));
     }
     return response;
   }
 
-  String _backendText(String body) {
+  String _ollamaText(String body) {
     try {
       final decoded = jsonDecode(body);
       if (decoded is String) return decoded;
@@ -260,40 +252,9 @@ class AiService {
           final content = message['content'];
           if (content is String && content.trim().isNotEmpty) return content;
         }
-        for (final key in [
-          'text',
-          'output',
-          'result',
-          'response',
-          'generated_text',
-          'translation',
-          'reply',
-          'answer',
-          'message_text',
-        ]) {
-          final value = decoded[key];
-          if (value is String && value.trim().isNotEmpty) return value;
-        }
-        final data = decoded['data'];
-        if (data is String && data.trim().isNotEmpty) return data;
-        if (data is Map<String, dynamic>) {
-          for (final key in ['text', 'output', 'result', 'response', 'reply', 'answer']) {
-            final value = data[key];
-            if (value is String && value.trim().isNotEmpty) return value;
-          }
-        }
-        final choices = decoded['choices'];
-        if (choices is List && choices.isNotEmpty) {
-          final first = choices.first;
-          if (first is Map<String, dynamic>) {
-            final choiceMessage = first['message'];
-            if (choiceMessage is Map<String, dynamic>) {
-              final content = choiceMessage['content'];
-              if (content is String) return content;
-            }
-            final text = first['text'];
-            if (text is String) return text;
-          }
+        for (final key in ['response', 'text', 'output', 'reply', 'answer']) {
+          final v = decoded[key];
+          if (v is String && v.trim().isNotEmpty) return v;
         }
       }
     } catch (_) {

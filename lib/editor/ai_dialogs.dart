@@ -75,19 +75,19 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
               },
             ),
             const SizedBox(height: 8),
-            if (_provider == AiProvider.backend)
+            if (_provider == AiProvider.ollama)
               TextField(
                 controller: _backendUrl,
                 onChanged: (_) => setState(() => _testResult = null),
                 decoration: const InputDecoration(
-                  labelText: 'Backend URL',
-                  helperText: 'Web: public HTTPS + CORS. Desktop/mobile: HTTP/local OK. e.g. https://host/api/chat',
+                  labelText: 'Ollama URL',
+                  helperText: 'Desktop/mobile: http://localhost:11434. Web: public HTTPS Ollama proxy with CORS.',
                 ),
               ),
-            if (_provider == AiProvider.backend && kIsWeb && _backendUrl.text.trim().startsWith('http://'))
-              Padding(padding: const EdgeInsets.only(top: 6), child: Text('Web builds cannot call HTTP/private endpoints. Use HTTPS with CORS.', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))),
-            if (_provider == AiProvider.backend) const SizedBox(height: 8),
-            if (_provider == AiProvider.backend)
+            if (_provider == AiProvider.ollama && kIsWeb && _backendUrl.text.trim().startsWith('http://'))
+              Padding(padding: const EdgeInsets.only(top: 6), child: Text('Web builds may block local HTTP Ollama; use a public HTTPS Ollama proxy with CORS, or run desktop app.', style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12))),
+            if (_provider == AiProvider.ollama) const SizedBox(height: 8),
+            if (_provider == AiProvider.ollama)
               Row(children: [
                 OutlinedButton.icon(
                   onPressed: _testing ? null : () async {
@@ -110,13 +110,13 @@ class _AiSettingsDialogState extends State<AiSettingsDialog> {
               ]),
             if (_testResult != null)
               Padding(padding: const EdgeInsets.only(top: 8), child: Text(_testResult!, style: TextStyle(color: _testOk ? Colors.green : Theme.of(context).colorScheme.error))),
-            if (_provider == AiProvider.backend) const SizedBox(height: 8),
+            if (_provider == AiProvider.ollama) const SizedBox(height: 8),
             TextField(
               controller: _key,
               obscureText: true,
               decoration: InputDecoration(
-                labelText: _provider == AiProvider.backend
-                    ? 'Backend token (optional)'
+                labelText: _provider == AiProvider.ollama
+                    ? 'API token (optional)'
                     : 'API key',
                 helperText: 'Stored only on this device',
               ),
