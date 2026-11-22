@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../book/book_preview.dart';
 import '../core/constants.dart';
+import '../core/text_direction.dart';
 import '../models/book.dart';
 import '../services/ai_service.dart';
 import 'ai_dialogs.dart';
@@ -44,6 +45,7 @@ class _ChapterEditorState extends State<ChapterEditor>
   final Set<int> _selected = <int>{};
   bool _selectMode = false;
   bool _continuousView = true;
+  String _applyScope = 'selected'; // selected, chapter, book
   int _revision = 0;
   AiSettings _aiSettings = const AiSettings();
   final List<List<Map<String, dynamic>>> _undo = [];
@@ -121,6 +123,14 @@ class _ChapterEditorState extends State<ChapterEditor>
     });
   }
 
+
+  List<Block> _scopeBlocks() {
+    if (_applyScope == 'book') return [for (final c in widget.book.allChapters) ...c.blocks];
+    if (_applyScope == 'chapter') return _chapter.blocks;
+    final idx = _targetIndexes.toList();
+    if (idx.isEmpty) return _active == null ? <Block>[] : [_active!];
+    return [for (final i in idx) _chapter.blocks[i]];
+  }
   Iterable<int> get _targetIndexes {
     if (_selected.isNotEmpty) return _selected;
     final i = _activeIndex;
@@ -220,10 +230,10 @@ class _ChapterEditorState extends State<ChapterEditor>
   }
 
   void _flipDirection() {
-    final block = _active;
-    if (block == null) return;
+    final targets = _scopeBlocks();
+    if (targets.isEmpty) return;
     _record();
-    block.rtl = !block.resolvedRtl(_languageCode);
+    for (final b in targets) { b.rtl = !(b.rtl ?? isRtlLanguage(_languageCode)); }
     _touch();
   }
 
@@ -434,7 +444,7 @@ class _ChapterEditorState extends State<ChapterEditor>
                       OutlinedButton.icon(
                         onPressed: _clearSelection,
                         icon: const Icon(Icons.clear),
-                        label: Text('Clear (${_selected.length})'),
+                        label: Text('Deselect ${_selected.length} paragraphs'),
                       ),
                   ],
                 ),
@@ -471,6 +481,7 @@ class _ChapterEditorState extends State<ChapterEditor>
                         onBeforeChange: _record,
                         onChanged: _touch,
                         onDelete: () => _deleteBlock(i),
+                        onJoinPrevious: i == 0 ? null : () { _record(); _chapter.blocks[i - 1].text = '${_chapter.blocks[i - 1].text}\n${blocks[i].text}'.trim(); _chapter.blocks.removeAt(i); _activeIndex = i - 1; _touch(); },
                       ),
                     ),
         ),
@@ -628,25 +639,30 @@ class _ChapterEditorState extends State<ChapterEditor>
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                if (block == null && _selected.isEmpty)
-                  const Text('Tap a paragraph in Write to format it. Use top toolbar to switch between Continuous and Block edit view.')
+                Wrap(spacing: 8, runSpacing: 8, children:[
+                  ChoiceChip(label: const Text('Selected paragraphs'), selected: _applyScope=='selected', onSelected: (_)=>setState(()=>_applyScope='selected')),
+                  ChoiceChip(label: const Text('This chapter'), selected: _applyScope=='chapter', onSelected: (_)=>setState(()=>_applyScope='chapter')),
+                  ChoiceChip(label: const Text('Entire book'), selected: _applyScope=='book', onSelected: (_)=>setState(()=>_applyScope='book')),
+                ]),
+                const SizedBox(height: 12),
+                if (block == null && _selected.isEmpty && _applyScope=='selected')
+                  const Text('Tap a paragraph in Write to format it, or choose This chapter / Entire book.')
                 else ...[
-                  if (_selected.isNotEmpty) Text('${_selected.length} blocks selected'),
                   DropdownButtonFormField<BlockType>(
                     initialValue: (block ?? _chapter.blocks.first).type,
                     decoration: const InputDecoration(labelText: 'Block type'),
                     items: [for (final type in BlockType.values) DropdownMenuItem(value: type, child: Text(type.label))],
-                    onChanged: (type) { if (type == null) return; _record(); for (final i in _targetIndexes) { _chapter.blocks[i].type = type; } _touch(); },
+                    onChanged: (type) { if (type == null) return; _record(); for (final b in _scopeBlocks()) { b.type = type; } _touch(); },
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<bool?>(
                     initialValue: block?.rtl,
                     decoration: const InputDecoration(labelText: 'Paragraph direction'),
                     items: const [DropdownMenuItem(value: null, child: Text('Auto (book language)')), DropdownMenuItem(value: true, child: Text('Right to left')), DropdownMenuItem(value: false, child: Text('Left to right'))],
-                    onChanged: (v) { _record(); for (final i in _targetIndexes) { _chapter.blocks[i].rtl = v; } _touch(); },
+                    onChanged: (v) { _record(); for (final b in _scopeBlocks()) { b.rtl = v; } _touch(); },
                   ),
                   const SizedBox(height: 8),
-                  Row(children:[const Text('Paragraph spacing'), Expanded(child: Slider(value: (block?.paragraphSpacing ?? 8).clamp(0,32), min:0, max:32, divisions:16, onChanged: (v){ _record(); for (final i in _targetIndexes) { _chapter.blocks[i].paragraphSpacing = v; } _touch(); })), Text('${(block?.paragraphSpacing ?? 8).round()} pt')]),
+                  Row(children:[const Text('Paragraph spacing'), Expanded(child: Slider(value: (block?.paragraphSpacing ?? 8).clamp(0,32), min:0, max:32, divisions:16, onChanged: (v){ _record(); for (final b in _scopeBlocks()) { b.paragraphSpacing = v; } _touch(); })), Text('${(block?.paragraphSpacing ?? 8).round()} pt')]),
                   const Divider(height: 24),
                   FontToolbar(style: targetStyle, onChanged: _applyStyle),
                 ],
@@ -854,11 +870,7 @@ class _ChapterEditorState extends State<ChapterEditor>
                   style: const TextStyle(color: Colors.white70),
                 ),
                 const Spacer(),
-                Chip(
-                  label: Text(languageName(_languageCode)),
-                  backgroundColor: Colors.white24,
-                  labelStyle: const TextStyle(color: Colors.white),
-                ),
+                Chip(label: Text(languageName(_languageCode)), backgroundColor: Colors.white, labelStyle: TextStyle(color: color, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -869,13 +881,19 @@ class _ChapterEditorState extends State<ChapterEditor>
               style: Theme.of(context).textTheme.labelLarge,
             ),
           ),
-          for (final chapter in widget.chapters)
-            ListTile(
-              selected: chapter.id == _chapter.id,
-              leading: const Icon(Icons.bookmark_border),
-              title: Text(chapter.title),
-              onTap: () => _selectChapter(chapter),
-            ),
+          for (var i = 0; i < widget.chapters.length; i++)
+            Builder(builder: (context) {
+              final chapter = widget.chapters[i];
+              final sameAsBook = chapter.title.trim() == widget.book.title.trim() || chapter.title.trim().isEmpty;
+              final label = sameAsBook ? 'Chapter ${i + 1}' : chapter.title;
+              return ListTile(
+                selected: chapter.id == _chapter.id,
+                leading: CircleAvatar(radius: 14, child: Text('${i + 1}', style: const TextStyle(fontSize: 12))),
+                title: Text(label),
+                subtitle: sameAsBook ? Text(chapter.title.isEmpty ? 'Untitled chapter' : 'Same as book title') : null,
+                onTap: () => _selectChapter(chapter),
+              );
+            }),
           const Divider(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
@@ -1000,6 +1018,7 @@ class _BlockTile extends StatelessWidget {
   final VoidCallback onBeforeChange;
   final VoidCallback onChanged;
   final VoidCallback onDelete;
+  final VoidCallback? onJoinPrevious;
 
   const _BlockTile({
     super.key,
@@ -1013,6 +1032,7 @@ class _BlockTile extends StatelessWidget {
     required this.onBeforeChange,
     required this.onChanged,
     required this.onDelete,
+    this.onJoinPrevious,
   });
 
   @override
@@ -1084,6 +1104,7 @@ class _BlockTile extends StatelessWidget {
                 itemBuilder: (_) => const [PopupMenuItem(value:null, child: Text('Auto')), PopupMenuItem(value:true, child: Text('RTL')), PopupMenuItem(value:false, child: Text('LTR'))],
                 child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Icon(rtl?Icons.format_textdirection_r_to_l:Icons.format_textdirection_l_to_r)),
               ),
+              IconButton(tooltip:'Join with previous', icon:const Icon(Icons.merge_type), onPressed:onJoinPrevious),
               IconButton(tooltip:'Split paragraph', icon:const Icon(Icons.call_split), onPressed:(){ final parts=block.text.split('\n'); if(parts.length<2) return; onBeforeChange(); block.text=parts.first; onChanged(); }),
               IconButton(tooltip:'Delete block', icon: const Icon(Icons.delete_outline), onPressed:onDelete),
             ],
@@ -1098,12 +1119,7 @@ class _BlockTile extends StatelessWidget {
             style: textStyle,
             decoration: const InputDecoration(border: InputBorder.none, hintText: 'Write here...'),
           ),
-          Row(children:[
-            const Text('Paragraph spacing'),
-            Expanded(child: Slider(value: block.paragraphSpacing.clamp(0,32), min:0, max:32, divisions:16,
-              onChanged:(v){ onBeforeChange(); block.paragraphSpacing=v; onChanged(); })),
-            Text('${block.paragraphSpacing.round()} pt'),
-          ]),
+
         ],
       ),
     );
