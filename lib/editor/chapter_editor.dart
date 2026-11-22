@@ -376,11 +376,29 @@ class _ChapterEditorState extends State<ChapterEditor>
             ],
           ),
           PopupMenuButton<String>(
-            tooltip: 'Insert / Heading / Save',
-            icon: const Icon(Icons.add_circle_outline),
-            onSelected: (v) {
-              if (v == 'save') { widget.onChanged(); setState(()=>_saveStatus='Saved'); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved'))); return; }
-              if (v.startsWith('type:')) { _addBlock(BlockType.values.byName(v.split(':')[1])); return; }
+            tooltip: 'Chapter actions',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (v) async {
+              if (v == 'save') { widget.onChanged(); setState(()=>_saveStatus='Saved'); return; }
+              if (v == 'copy') {
+                final text = _chapter.blocks.map((b)=>b.text).join('\n\n');
+                await Clipboard.setData(ClipboardData(text: text));
+                if (!context.mounted) return; ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chapter copied')));
+              }
+              if (v == 'paste') {
+                final data = await Clipboard.getData('text/plain');
+                final text = data?.text ?? '';
+                if (text.trim().isEmpty) return;
+                _record();
+                final parts = text.split(RegExp(r'\n\s*\n')).where((p)=>p.trim().isNotEmpty);
+                _chapter.blocks..clear()..addAll(parts.map((p)=>Block(text:p.trim(), style: defaultStyleFor(_languageCode))));
+                _controllers.clear();
+                _activeIndex = _chapter.blocks.isEmpty ? null : 0;
+                _touch();
+              }
+              if (v == 'selectall') { setState(() { _selectMode = true; _selected..clear()..addAll(List.generate(_chapter.blocks.length,(i)=>i)); }); }
+              if (v == 'editall') { _showWholeChapterEditor(); }
+              if (v.startsWith('type:')) { _addBlock(BlockType.values.byName(v.split(':')[1])); }
               if (v.startsWith('set:')) {
                 final t = BlockType.values.byName(v.split(':')[1]);
                 _record();
@@ -389,7 +407,11 @@ class _ChapterEditorState extends State<ChapterEditor>
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'save', child: ListTile(leading: Icon(Icons.save_outlined), title: Text('Save now'))),
+              const PopupMenuItem(value: 'save', child: Text('Save now')),
+              const PopupMenuItem(value: 'copy', child: Text('Copy whole chapter')),
+              const PopupMenuItem(value: 'paste', child: Text('Paste/replace whole chapter')),
+              const PopupMenuItem(value: 'editall', child: Text('Edit whole chapter text')),
+              const PopupMenuItem(value: 'selectall', child: Text('Select all blocks')),
               const PopupMenuDivider(),
               const PopupMenuItem(enabled: false, child: Text('Insert block')),
               for (final t in BlockType.values) PopupMenuItem(value: 'type:${t.name}', child: Text('Insert ${t.label}')),
@@ -574,6 +596,23 @@ class _ChapterEditorState extends State<ChapterEditor>
         ]),
       ),
     );
+  }
+
+
+  Future<void> _showWholeChapterEditor() async {
+    final c = TextEditingController(text: _chapter.blocks.map((b)=>b.text).join('\n\n'));
+    final ok = await showDialog<bool>(context: context, builder: (ctx)=>AlertDialog(
+      title: const Text('Edit whole chapter'),
+      content: SizedBox(width: 700, height: 500, child: TextField(controller: c, maxLines: null, expands: true, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Paste or edit full chapter text...'))),
+      actions: [TextButton(onPressed: ()=>Navigator.pop(ctx,false), child: const Text('Cancel')), FilledButton(onPressed: ()=>Navigator.pop(ctx,true), child: const Text('Apply'))],
+    ));
+    if (ok != true) return;
+    _record();
+    final parts = c.text.split(RegExp(r'\n\s*\n')).map((p)=>p.trim()).where((p)=>p.isNotEmpty).toList();
+    _chapter.blocks..clear()..addAll(parts.isEmpty ? [Block(style: defaultStyleFor(_languageCode))] : parts.map((p)=>Block(text:p, style: defaultStyleFor(_languageCode))));
+    _controllers.clear();
+    _activeIndex = _chapter.blocks.isEmpty ? null : 0;
+    _touch();
   }
 
   Widget _buildContinuousView(List<Block> blocks) {
