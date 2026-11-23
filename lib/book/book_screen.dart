@@ -8,6 +8,7 @@ import '../core/constants.dart';
 import '../editor/chapter_editor.dart';
 import '../export/exporter.dart';
 import '../models/book.dart';
+import '../services/file_saver.dart';
 import '../storage/book_importer.dart';
 import 'book_preview.dart';
 
@@ -133,15 +134,21 @@ class _BookScreenState extends State<BookScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _export(BookExporter exporter) async {
-    final bytes = await exporter.export(book);
     final base = book.title.trim().isEmpty ? 'book' : book.title.trim();
-    final path = await FilePicker.platform.saveFile(
-      dialogTitle: 'Export ${exporter.label}',
-      fileName: '$base.${exporter.extension}',
-      bytes: bytes,
-    );
-    if (!mounted || path == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exported ${exporter.label}')));
+    final fileName = '${base.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')}.${exporter.extension}';
+    try {
+      final bytes = await exporter.export(book);
+      final saved = await saveBookFile(
+        fileName: fileName,
+        bytes: bytes,
+        mimeType: exporter.mimeType,
+      );
+      if (!mounted || !saved) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exported ${exporter.label}')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+    }
   }
 
   Future<void> _pickCover() async {
