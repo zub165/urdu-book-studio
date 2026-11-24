@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:urdu_book_studio/editor/chapter_editor.dart';
+import 'package:urdu_book_studio/editor/font_toolbar.dart';
 import 'package:urdu_book_studio/main.dart';
 import 'package:urdu_book_studio/models/book.dart';
 import 'package:urdu_book_studio/services/app_settings.dart';
@@ -87,6 +88,71 @@ void main() {
 
     expect(find.text('Write'), findsOneWidget);
     expect(find.text('Write here...'), findsWidgets);
+  });
+
+  testWidgets('font toolbar updates the block and Format tab reflects it',
+      (WidgetTester tester) async {
+    final book = Book.create(title: 'Book', author: 'Author', languageCode: 'en');
+    await tester.pumpWidget(MaterialApp(
+      home: ChapterEditor(
+        book: book,
+        chapter: book.chapters.first,
+        chapters: book.chapters,
+        onChanged: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('font_Roboto')).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Noto Naskh Arabic').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      book.chapters.first.blocks.first.style.fontFamily,
+      'Noto Naskh Arabic',
+    );
+
+    await tester.tap(find.text('Format'));
+    await tester.pumpAndSettle();
+    final formatDropdown = find.descendant(
+      of: find.byType(FontToolbar).last,
+      matching: find.byType(DropdownButtonFormField<String>),
+    );
+    expect(
+      tester.widget<DropdownButtonFormField<String>>(formatDropdown).initialValue,
+      'Noto Naskh Arabic',
+    );
+  });
+
+  testWidgets('selecting a template restyles every chapter',
+      (WidgetTester tester) async {
+    final book = Book.create(title: 'Book', author: 'Author', languageCode: 'en');
+    final second = Chapter(title: 'Chapter 2', blocks: [Block(text: 'Second')]);
+    book.chapters.add(second);
+    await tester.pumpWidget(MaterialApp(
+      home: ChapterEditor(
+        book: book,
+        chapter: book.chapters.first,
+        chapters: book.chapters,
+        onChanged: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Format'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('template_classic')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Naskh —').last);
+    await tester.pumpAndSettle();
+
+    for (final chapter in book.allChapters) {
+      for (final block in chapter.blocks) {
+        expect(block.style.fontFamily, 'Noto Naskh Arabic');
+      }
+    }
+    expect(book.templateId, 'naskh');
   });
 
   testWidgets('editor text stays visible in dark theme',

@@ -71,6 +71,7 @@ class FontToolbar extends StatelessWidget {
         SizedBox(
           width: 220,
           child: DropdownButtonFormField<String>(
+            key: ValueKey('font_${current.fontFamily}'),
             initialValue: kFonts.contains(current.fontFamily)
                 ? current.fontFamily
                 : kFonts.first,

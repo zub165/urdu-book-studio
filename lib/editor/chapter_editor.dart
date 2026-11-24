@@ -57,6 +57,7 @@ class _ChapterEditorState extends State<ChapterEditor>
   void initState() {
     super.initState();
     _chapter = widget.chapter;
+    if (_chapter.blocks.isNotEmpty) _activeIndex = 0;
     _tabs = TabController(length: 5, vsync: this);
     AiSettingsStore().load().then((settings) {
       if (mounted) setState(() => _aiSettings = settings);
@@ -148,13 +149,11 @@ class _ChapterEditorState extends State<ChapterEditor>
   }
 
   void _applyStyle(TextStyleData next) {
-    final targets = _targetIndexes.toList();
+    final targets = _scopeBlocks();
     if (targets.isEmpty) return;
     _record();
-    for (final i in targets) {
-      if (i >= 0 && i < _chapter.blocks.length) {
-        _chapter.blocks[i].style = next;
-      }
+    for (final block in targets) {
+      block.style = next.copyWith();
     }
     _touch();
   }
@@ -190,7 +189,7 @@ class _ChapterEditorState extends State<ChapterEditor>
     if (_chapter.blocks.isEmpty) return;
     _record();
     for (final block in _chapter.blocks) {
-      block.style = next;
+      block.style = next.copyWith();
     }
     _touch();
   }
@@ -227,7 +226,9 @@ class _ChapterEditorState extends State<ChapterEditor>
     if (chapter.id != _chapter.id) {
       setState(() {
         _chapter = chapter;
-        _activeIndex = null;
+        _activeIndex = chapter.blocks.isNotEmpty ? 0 : null;
+        _selected.clear();
+        _selectMode = false;
         _undo.clear();
         _redo.clear();
         _revision++;
@@ -480,7 +481,7 @@ class _ChapterEditorState extends State<ChapterEditor>
   Widget _buildWriteTab() {
     final scheme = Theme.of(context).colorScheme;
     final blocks = _chapter.blocks;
-    final activeStyle = _active?.style ?? defaultStyleFor(_languageCode);
+    final activeStyle = _active?.style;
     return Column(
       children: [
         Material(
@@ -497,8 +498,9 @@ class _ChapterEditorState extends State<ChapterEditor>
                   runSpacing: 8,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: _selected.isNotEmpty || _active != null
-                          ? () => _applyStyleToAll(activeStyle)
+                      onPressed: _selected.isNotEmpty || activeStyle != null
+                          ? () => _applyStyleToAll(
+                              activeStyle ?? defaultStyleFor(_languageCode))
                           : null,
                       icon: const Icon(Icons.format_paint_outlined),
                       label: const Text('Apply to all blocks'),
@@ -703,9 +705,11 @@ class _ChapterEditorState extends State<ChapterEditor>
   }
 
   Widget _buildFormatTab() {
-    final block = _active;
     final template = bookTemplateById(widget.book.templateId);
-    final targetStyle = block?.style ?? defaultStyleFor(_languageCode);
+    final scopeBlocks = _scopeBlocks();
+    final sampleBlock = scopeBlocks.isNotEmpty ? scopeBlocks.first : null;
+    final targetStyle = sampleBlock?.style ?? defaultStyleFor(_languageCode);
+    final canFormat = scopeBlocks.isNotEmpty;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -719,8 +723,14 @@ class _ChapterEditorState extends State<ChapterEditor>
                     style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
+                  key: ValueKey('template_${widget.book.templateId}'),
                   initialValue: widget.book.templateId,
+                  isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Book template'),
+                  selectedItemBuilder: (_) => [
+                    for (final t in kBookTemplates)
+                      Text(t.name, overflow: TextOverflow.ellipsis),
+                  ],
                   items: [
                     for (final t in kBookTemplates)
                       DropdownMenuItem(
@@ -730,8 +740,7 @@ class _ChapterEditorState extends State<ChapterEditor>
                   ],
                   onChanged: (id) {
                     if (id == null) return;
-                    widget.book.templateId = id;
-                    _touch();
+                    _applyTemplate(bookTemplateById(id), wholeBook: true);
                   },
                 ),
                 const SizedBox(height: 12),
@@ -740,22 +749,27 @@ class _ChapterEditorState extends State<ChapterEditor>
                   runSpacing: 8,
                   children: [
                     FilledButton.icon(
-                      onPressed: _chapter.blocks.isEmpty
-                          ? null
-                          : () => _applyStyleToAll(targetStyle),
+                      onPressed: canFormat
+                          ? () => _applyStyleToAll(targetStyle)
+                          : null,
                       icon: const Icon(Icons.format_paint),
-                      label: const Text('Apply font to whole page'),
+                      label: const Text('Apply font to whole chapter'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: () => _applyTemplate(template),
+                      onPressed: () => _applyTemplate(template, wholeBook: true),
                       icon: const Icon(Icons.auto_fix_high),
-                      label: const Text('Apply template style'),
+                      label: const Text('Apply template to entire book'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => _applyTemplate(template, wholeBook: false),
+                      icon: const Icon(Icons.auto_fix_high_outlined),
+                      label: const Text('This chapter only'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Template changes preview appearance; "Apply template style" also updates block fonts/sizes.',
+                  'Selecting a template restyles every chapter. Font controls below follow the chosen scope.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -769,7 +783,9 @@ class _ChapterEditorState extends State<ChapterEditor>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _selected.isNotEmpty ? 'Selected blocks' : 'Selected block',
+                  canFormat
+                      ? 'Formatting ${scopeBlocks.length} paragraph(s)'
+                      : 'Nothing to format yet',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -779,24 +795,26 @@ class _ChapterEditorState extends State<ChapterEditor>
                   ChoiceChip(label: const Text('Entire book'), selected: _applyScope=='book', onSelected: (_)=>setState(()=>_applyScope='book')),
                 ]),
                 const SizedBox(height: 12),
-                if (block == null && _selected.isEmpty && _applyScope=='selected')
-                  const Text('Tap a paragraph in Write to format it, or choose This chapter / Entire book.')
+                if (!canFormat)
+                  const Text('Add or select a paragraph in Write, or choose This chapter / Entire book.')
                 else ...[
                   DropdownButtonFormField<BlockType>(
-                    initialValue: (block ?? _chapter.blocks.first).type,
+                    key: ValueKey('blocktype_${_applyScope}_${sampleBlock?.type}'),
+                    initialValue: sampleBlock?.type ?? BlockType.paragraph,
                     decoration: const InputDecoration(labelText: 'Block type'),
                     items: [for (final type in BlockType.values) DropdownMenuItem(value: type, child: Text(type.label))],
                     onChanged: (type) { if (type == null) return; _record(); for (final b in _scopeBlocks()) { b.type = type; } _touch(); },
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<bool?>(
-                    initialValue: block?.rtl,
+                    key: ValueKey('direction_${_applyScope}_${sampleBlock?.rtl}'),
+                    initialValue: sampleBlock?.rtl,
                     decoration: const InputDecoration(labelText: 'Paragraph direction'),
                     items: const [DropdownMenuItem(value: null, child: Text('Auto (book language)')), DropdownMenuItem(value: true, child: Text('Right to left')), DropdownMenuItem(value: false, child: Text('Left to right'))],
                     onChanged: (v) { _record(); for (final b in _scopeBlocks()) { b.rtl = v; } _touch(); },
                   ),
                   const SizedBox(height: 8),
-                  Row(children:[const Text('Paragraph spacing'), Expanded(child: Slider(value: (block?.paragraphSpacing ?? 8).clamp(0,32), min:0, max:32, divisions:16, onChanged: (v){ _record(); for (final b in _scopeBlocks()) { b.paragraphSpacing = v; } _touch(); })), Text('${(block?.paragraphSpacing ?? 8).round()} pt')]),
+                  Row(children:[const Text('Paragraph spacing'), Expanded(child: Slider(value: (sampleBlock?.paragraphSpacing ?? 8).clamp(0,32).toDouble(), min:0, max:32, divisions:16, onChanged: (v){ _record(); for (final b in _scopeBlocks()) { b.paragraphSpacing = v; } _touch(); })), Text('${(sampleBlock?.paragraphSpacing ?? 8).round()} pt')]),
                   const Divider(height: 24),
                   FontToolbar(style: targetStyle, onChanged: _applyStyle),
                 ],
@@ -808,28 +826,40 @@ class _ChapterEditorState extends State<ChapterEditor>
     );
   }
 
-  void _applyTemplate(BookTemplate template) {
-    if (_chapter.blocks.isEmpty) return;
+  void _applyTemplate(BookTemplate template, {required bool wholeBook}) {
+    final chapters = wholeBook ? widget.book.allChapters : <Chapter>[_chapter];
+    if (!chapters.any((chapter) => chapter.blocks.isNotEmpty)) return;
     _record();
-    for (final block in _chapter.blocks) {
-      final isHeading = block.type == BlockType.heading1 ||
-          block.type == BlockType.heading2 ||
-          block.type == BlockType.heading3;
-      final size = switch (block.type) {
-        BlockType.heading1 => template.bodySize + 8,
-        BlockType.heading2 => template.bodySize + 5,
-        BlockType.heading3 => template.bodySize + 2,
-        _ => template.bodySize,
-      };
-      block.style = block.style.copyWith(
-        fontFamily: isHeading ? template.headingFont : template.bodyFont,
-        fontSize: size.toDouble(),
-        lineHeight: template.lineHeight,
-        color: template.text,
-      );
+    for (final chapter in chapters) {
+      for (final block in chapter.blocks) {
+        final isHeading = block.type == BlockType.heading1 ||
+            block.type == BlockType.heading2 ||
+            block.type == BlockType.heading3;
+        final size = switch (block.type) {
+          BlockType.heading1 => template.bodySize + 8,
+          BlockType.heading2 => template.bodySize + 5,
+          BlockType.heading3 => template.bodySize + 2,
+          _ => template.bodySize,
+        };
+        block.style = block.style.copyWith(
+          fontFamily: isHeading ? template.headingFont : template.bodyFont,
+          fontSize: size.toDouble(),
+          lineHeight: template.lineHeight,
+          color: template.text,
+        );
+      }
     }
     widget.book.templateId = template.id;
     _touch();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${template.name} applied to ${wholeBook ? 'entire book' : 'this chapter'}',
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildOutlineTab() {

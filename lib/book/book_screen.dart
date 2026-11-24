@@ -418,6 +418,7 @@ class _BookScreenState extends State<BookScreen> with SingleTickerProviderStateM
     return ListView(padding: const EdgeInsets.all(16), children: [
       _sectionCard('Typography & template', Column(children: [
         DropdownButtonFormField<String>(
+          key: ValueKey('template_${book.templateId}'),
           initialValue: book.templateId,
           decoration: const InputDecoration(labelText: 'Template'),
           items: [for (final t in kBookTemplates) DropdownMenuItem(value: t.id, child: Text(t.name))],
@@ -425,6 +426,7 @@ class _BookScreenState extends State<BookScreen> with SingleTickerProviderStateM
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
+          key: ValueKey('pagesize_${book.pageSize}'),
           initialValue: book.pageSize,
           decoration: const InputDecoration(labelText: 'Print page size'),
           items: const [
