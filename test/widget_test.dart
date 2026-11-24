@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:urdu_book_studio/core/constants.dart';
 import 'package:urdu_book_studio/editor/chapter_editor.dart';
 import 'package:urdu_book_studio/editor/font_toolbar.dart';
 import 'package:urdu_book_studio/main.dart';
@@ -13,6 +14,15 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+  });
+
+  test('every language font is registered and used as the default', () {
+    for (final language in kLanguages) {
+      final font = fontForLanguage(language.code);
+      if (font == null) continue;
+      expect(kFonts, contains(font), reason: '${language.code} -> $font');
+      expect(defaultStyleFor(language.code).fontFamily, font);
+    }
   });
 
   testWidgets('library screen starts empty', (WidgetTester tester) async {
@@ -88,6 +98,33 @@ void main() {
 
     expect(find.text('Write'), findsOneWidget);
     expect(find.text('Write here...'), findsWidgets);
+  });
+
+  testWidgets('size slider changes the active block font size',
+      (WidgetTester tester) async {
+    final book = Book.create(title: 'Book', author: 'Author', languageCode: 'en');
+    await tester.pumpWidget(MaterialApp(
+      home: ChapterEditor(
+        book: book,
+        chapter: book.chapters.first,
+        chapters: book.chapters,
+        onChanged: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final toolbar = find.byType(FontToolbar).first;
+    final sizeSlider = find.descendant(
+      of: toolbar,
+      matching: find.byType(Slider),
+    ).first;
+    final slider = tester.widget<Slider>(sizeSlider);
+    expect(slider.onChanged, isNotNull);
+    slider.onChanged!(28);
+
+    await tester.pumpAndSettle();
+    expect(book.chapters.first.blocks.first.style.fontSize, 28);
+    expect(find.text('Size 28'), findsWidgets);
   });
 
   testWidgets('font toolbar updates the block and Format tab reflects it',

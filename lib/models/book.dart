@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 
+import '../core/constants.dart';
 import '../core/text_direction.dart';
 
 enum BlockType { heading1, heading2, heading3, paragraph, quote, centered }
@@ -81,11 +82,22 @@ class TextStyleData {
       );
 }
 
-/// Sensible starting style for a language: Nastaliq for Urdu, Roboto otherwise.
-TextStyleData defaultStyleFor(String languageCode) => isRtlLanguage(languageCode)
-    ? const TextStyleData(
-        fontFamily: 'Noto Nastaliq Urdu', fontSize: 20, lineHeight: 2.0)
-    : const TextStyleData();
+/// Sensible starting style for a language, using its bundled script font.
+TextStyleData defaultStyleFor(String languageCode) {
+  final primary = languageCode.split(RegExp('[-_]')).first.toLowerCase();
+  final font = fontForLanguage(primary);
+  if (font != null) {
+    return TextStyleData(
+      fontFamily: font,
+      fontSize: primary == 'ur' ? 20 : 18,
+      lineHeight: primary == 'ur' ? 2.0 : 1.8,
+    );
+  }
+  return isRtlLanguage(languageCode)
+      ? const TextStyleData(
+          fontFamily: 'Noto Naskh Arabic', fontSize: 18, lineHeight: 1.8)
+      : const TextStyleData();
+}
 
 /// One paragraph-level unit of content.
 class Block {

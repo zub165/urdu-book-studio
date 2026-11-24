@@ -18,13 +18,39 @@ const List<(String, int)> kTextColors = [
 ];
 
 /// Controls for the selected block. Disabled when no block is selected.
-class FontToolbar extends StatelessWidget {
+class FontToolbar extends StatefulWidget {
   final TextStyleData? style;
   final ValueChanged<TextStyleData> onChanged;
 
   const FontToolbar({super.key, required this.style, required this.onChanged});
 
-  Future<void> _pickColor(BuildContext context, TextStyleData current) async {
+  @override
+  State<FontToolbar> createState() => _FontToolbarState();
+}
+
+class _FontToolbarState extends State<FontToolbar> {
+  late TextStyleData _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.style ?? const TextStyleData();
+  }
+
+  @override
+  void didUpdateWidget(FontToolbar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.style != oldWidget.style) {
+      _current = widget.style ?? const TextStyleData();
+    }
+  }
+
+  void _apply(TextStyleData next) {
+    setState(() => _current = next);
+    widget.onChanged(next);
+  }
+
+  Future<void> _pickColor(BuildContext context) async {
     final color = await showDialog<int>(
       context: context,
       builder: (ctx) => SimpleDialog(
@@ -55,13 +81,13 @@ class FontToolbar extends StatelessWidget {
         ],
       ),
     );
-    if (color != null) onChanged(current.copyWith(color: color));
+    if (color != null) _apply(_current.copyWith(color: color));
   }
 
   @override
   Widget build(BuildContext context) {
-    final enabled = style != null;
-    final current = style ?? const TextStyleData();
+    final enabled = widget.style != null;
+    final current = _current;
 
     return Wrap(
       spacing: 12,
@@ -98,7 +124,7 @@ class FontToolbar extends StatelessWidget {
             ],
             onChanged: enabled
                 ? (v) {
-                    if (v != null) onChanged(current.copyWith(fontFamily: v));
+                    if (v != null) _apply(current.copyWith(fontFamily: v));
                   }
                 : null,
           ),
@@ -115,7 +141,7 @@ class FontToolbar extends StatelessWidget {
                   max: 48,
                   divisions: 38,
                   onChanged: enabled
-                      ? (v) => onChanged(current.copyWith(fontSize: v.roundToDouble()))
+                      ? (v) => _apply(current.copyWith(fontSize: v.roundToDouble()))
                       : null,
                 ),
               ),
@@ -127,15 +153,15 @@ class FontToolbar extends StatelessWidget {
           child: Row(children: [
             Expanded(flex:0, child: Text('Line ${current.lineHeight.toStringAsFixed(1)}x', overflow: TextOverflow.ellipsis)),
             Expanded(child: Slider(value: current.lineHeight.clamp(1.0, 3.0).toDouble(), min: 1.0, max: 3.0, divisions: 20,
-              onChanged: enabled ? (v) => onChanged(current.copyWith(lineHeight: double.parse(v.toStringAsFixed(1)))) : null)),
+              onChanged: enabled ? (v) => _apply(current.copyWith(lineHeight: double.parse(v.toStringAsFixed(1)))) : null)),
           ]),
         ),
         SizedBox(
           width: 260,
           child: Row(children: [
             Expanded(flex:0, child: Text('Letter ${current.letterSpacing.toStringAsFixed(1)}', overflow: TextOverflow.ellipsis)),
-            Expanded(child: Slider(value: current.letterSpacing.clamp(0.0, 5.0).toDouble(), min: 0, max: 5, divisions: 20,
-              onChanged: enabled ? (v) => onChanged(current.copyWith(letterSpacing: double.parse(v.toStringAsFixed(1)))) : null)),
+            Expanded(child: Slider(value: current.letterSpacing.clamp(0.0, 5.0).toDouble(), min: 0, max: 5, divisions: 50,
+              onChanged: enabled ? (v) => _apply(current.copyWith(letterSpacing: double.parse(v.toStringAsFixed(1)))) : null)),
           ]),
         ),
         ToggleButtons(
@@ -144,11 +170,11 @@ class FontToolbar extends StatelessWidget {
               ? (i) {
                   switch (i) {
                     case 0:
-                      onChanged(current.copyWith(bold: !current.bold));
+                      _apply(current.copyWith(bold: !current.bold));
                     case 1:
-                      onChanged(current.copyWith(italic: !current.italic));
+                      _apply(current.copyWith(italic: !current.italic));
                     case 2:
-                      onChanged(current.copyWith(underline: !current.underline));
+                      _apply(current.copyWith(underline: !current.underline));
                   }
                 }
               : null,
@@ -162,7 +188,7 @@ class FontToolbar extends StatelessWidget {
           tooltip: 'Text color',
           icon: Icon(Icons.format_color_text,
               color: resolvedTextColor(context, current.color)),
-          onPressed: enabled ? () => _pickColor(context, current) : null,
+          onPressed: enabled ? () => _pickColor(context) : null,
         ),
       ],
     );
