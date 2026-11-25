@@ -312,6 +312,7 @@ class _ChapterEditorState extends State<ChapterEditor>
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final compact = MediaQuery.sizeOf(context).width < 700;
     return Scaffold(
       appBar: AppBar(
         title: InkWell(
@@ -336,31 +337,33 @@ class _ChapterEditorState extends State<ChapterEditor>
             icon: const Icon(Icons.redo),
             onPressed: _redo.isNotEmpty ? _redoChange : null,
           ),
-          IconButton(tooltip: 'Save now', icon: const Icon(Icons.save_outlined), onPressed: () { widget.onChanged(); setState(()=>_saveStatus='Saved'); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved'))); }),
-          IconButton(tooltip: 'Urdu keyboard', icon: Icon(_showUrduKeyboard ? Icons.keyboard_hide : Icons.keyboard), onPressed: () => setState(()=>_showUrduKeyboard=!_showUrduKeyboard)),
-          PopupMenuButton<BlockType>(
-            tooltip: 'Set block type / heading',
-            icon: const Icon(Icons.title),
-            onSelected: (t) { _record(); for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { b.type = t; } _touch(); },
-            itemBuilder: (_) => [for (final t in BlockType.values) PopupMenuItem(value: t, child: Text(t.label))],
-          ),
-          IconButton(
-            tooltip: _continuousView ? 'Block edit view' : 'Continuous writing view',
-            icon: Icon(_continuousView ? Icons.view_agenda_outlined : Icons.article_outlined),
-            onPressed: () => setState(() { _continuousView = !_continuousView; _selectMode = false; _selected.clear(); }),
-          ),
-          IconButton(tooltip: 'Select all blocks', icon: const Icon(Icons.select_all), onPressed: _chapter.blocks.isEmpty ? null : _selectAll),
-          if (!_continuousView)
-            IconButton(
-              tooltip: _selectMode ? 'Exit select mode' : 'Select blocks',
-              icon: Icon(_selectMode ? Icons.checklist_rtl : Icons.checklist),
-              onPressed: () => setState(() { _selectMode = !_selectMode; if (!_selectMode) _selected.clear(); }),
+          if (!compact) ...[
+            IconButton(tooltip: 'Save now', icon: const Icon(Icons.save_outlined), onPressed: () { widget.onChanged(); setState(()=>_saveStatus='Saved'); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved'))); }),
+            IconButton(tooltip: 'Urdu keyboard', icon: Icon(_showUrduKeyboard ? Icons.keyboard_hide : Icons.keyboard), onPressed: () => setState(()=>_showUrduKeyboard=!_showUrduKeyboard)),
+            PopupMenuButton<BlockType>(
+              tooltip: 'Set block type / heading',
+              icon: const Icon(Icons.title),
+              onSelected: (t) { _record(); for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { b.type = t; } _touch(); },
+              itemBuilder: (_) => [for (final t in BlockType.values) PopupMenuItem(value: t, child: Text(t.label))],
             ),
-          IconButton(
-            tooltip: 'Find and replace',
-            icon: const Icon(Icons.search),
-            onPressed: _findAndReplace,
-          ),
+            IconButton(
+              tooltip: _continuousView ? 'Block edit view' : 'Continuous writing view',
+              icon: Icon(_continuousView ? Icons.view_agenda_outlined : Icons.article_outlined),
+              onPressed: () => setState(() { _continuousView = !_continuousView; _selectMode = false; _selected.clear(); }),
+            ),
+            IconButton(tooltip: 'Select all blocks', icon: const Icon(Icons.select_all), onPressed: _chapter.blocks.isEmpty ? null : _selectAll),
+            if (!_continuousView)
+              IconButton(
+                tooltip: _selectMode ? 'Exit select mode' : 'Select blocks',
+                icon: Icon(_selectMode ? Icons.checklist_rtl : Icons.checklist),
+                onPressed: () => setState(() { _selectMode = !_selectMode; if (!_selectMode) _selected.clear(); }),
+              ),
+            IconButton(
+              tooltip: 'Find and replace',
+              icon: const Icon(Icons.search),
+              onPressed: _findAndReplace,
+            ),
+          ],
           PopupMenuButton<String>(
             tooltip: 'AI tools',
             icon: const Icon(Icons.auto_awesome),
@@ -383,6 +386,10 @@ class _ChapterEditorState extends State<ChapterEditor>
             icon: const Icon(Icons.more_vert),
             onSelected: (v) async {
               if (v == 'save') { widget.onChanged(); setState(()=>_saveStatus='Saved'); return; }
+              if (v == 'keyboard') { setState(()=>_showUrduKeyboard=!_showUrduKeyboard); return; }
+              if (v == 'view') { setState(() { _continuousView = !_continuousView; _selectMode = false; _selected.clear(); }); return; }
+              if (v == 'selectmode') { setState(() { _selectMode = !_selectMode; if (!_selectMode) _selected.clear(); }); return; }
+              if (v == 'find') { _findAndReplace(); return; }
               if (v == 'rename') {
                 final c = TextEditingController(text: _chapter.title);
                 final next = await showDialog<String>(context: context, builder: (ctx)=>AlertDialog(title: const Text('Rename chapter'), content: TextField(controller: c, autofocus: true, decoration: const InputDecoration(labelText: 'Chapter name')), actions:[TextButton(onPressed: ()=>Navigator.pop(ctx), child: const Text('Cancel')), FilledButton(onPressed: ()=>Navigator.pop(ctx,c.text.trim()), child: const Text('Save'))]));
@@ -417,6 +424,14 @@ class _ChapterEditorState extends State<ChapterEditor>
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'save', child: Text('Save now')),
+              if (compact) ...[
+                PopupMenuItem(value: 'keyboard', child: Text(_showUrduKeyboard ? 'Hide Urdu keyboard' : 'Show Urdu keyboard')),
+                PopupMenuItem(value: 'view', child: Text(_continuousView ? 'Block edit view' : 'Continuous writing view')),
+                if (!_continuousView)
+                  PopupMenuItem(value: 'selectmode', child: Text(_selectMode ? 'Exit select mode' : 'Select blocks')),
+                const PopupMenuItem(value: 'find', child: Text('Find and replace')),
+                const PopupMenuDivider(),
+              ],
               const PopupMenuItem(value: 'rename', child: Text('Rename chapter')),
               const PopupMenuItem(value: 'copy', child: Text('Copy whole chapter')),
               const PopupMenuItem(value: 'paste', child: Text('Paste/replace whole chapter')),
@@ -431,17 +446,7 @@ class _ChapterEditorState extends State<ChapterEditor>
             ],
           ),
         ],
-        bottom: TabBar(
-          controller: _tabs,
-          isScrollable: true,
-          tabs: const [
-            Tab(icon: Icon(Icons.edit_note), text: 'Write'),
-            Tab(icon: Icon(Icons.format_paint), text: 'Format'),
-            Tab(icon: Icon(Icons.visibility), text: 'Preview'),
-            Tab(icon: Icon(Icons.list_alt), text: 'Outline'),
-            Tab(icon: Icon(Icons.auto_awesome), text: 'AI'),
-          ],
-        ),
+        bottom: _buildTabBar(),
       ),
       drawer: _buildDrawer(scheme),
       body: LayoutBuilder(
@@ -460,6 +465,46 @@ class _ChapterEditorState extends State<ChapterEditor>
           );
         },
       ),
+    );
+  }
+
+  TabBar _buildTabBar() {
+    final compact = MediaQuery.sizeOf(context).width < 700;
+    const items = <MapEntry<IconData, String>>[
+      MapEntry(Icons.edit_note, 'Write'),
+      MapEntry(Icons.format_paint, 'Format'),
+      MapEntry(Icons.visibility, 'Preview'),
+      MapEntry(Icons.list_alt, 'Outline'),
+      MapEntry(Icons.auto_awesome, 'AI'),
+    ];
+    return TabBar(
+      controller: _tabs,
+      isScrollable: !compact,
+      labelPadding: compact
+          ? const EdgeInsets.symmetric(horizontal: 2)
+          : null,
+      tabs: [
+        for (final item in items)
+          Tab(
+            icon: compact ? null : Icon(item.key),
+            text: compact ? null : item.value,
+            child: compact
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(item.key, size: 18),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.value,
+                        style: const TextStyle(fontSize: 10),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  )
+                : null,
+          ),
+      ],
     );
   }
 

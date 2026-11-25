@@ -73,6 +73,39 @@ void main() {
     expect(find.text('Find and replace'), findsWidgets);
   });
 
+  testWidgets('outline and AI tabs are reachable on narrow screens',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final book = Book.create(
+      title: 'اردو کتاب',
+      author: 'ملک',
+      languageCode: 'ur',
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: ChapterEditor(
+        book: book,
+        chapter: book.chapters.first,
+        chapters: book.chapters,
+        onChanged: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Outline'));
+    await tester.pumpAndSettle();
+    expect(find.text('Heading outline'), findsOneWidget);
+
+    await tester.tap(find.text('AI'));
+    await tester.pumpAndSettle();
+    expect(find.text('Translate text'), findsOneWidget);
+    expect(find.text('API key'), findsWidgets);
+  });
+
   testWidgets('can create a book and open the editor', (WidgetTester tester) async {
     await tester.pumpWidget(UrduBookStudioApp(
       controller: AppSettingsController(const AppSettings()),
