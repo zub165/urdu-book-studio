@@ -232,6 +232,18 @@ void main() {
       expect(outline, contains('H2:'));
     });
 
+    test('Ollama uses a model available on the configured server', () {
+      expect(AiProvider.ollama.defaultModel, 'qwen2.5:3b');
+      expect(const AiSettings().model, 'qwen2.5:3b');
+      final restored = AiSettings.fromJson({
+        'provider': 'ollama',
+        'model': 'llama3.2',
+        'apiKey': '',
+        'backendUrl': 'https://api.docsoncalls.com/ollama',
+      });
+      expect(restored.model, 'qwen2.5:3b');
+    });
+
     test('every registered exporter returns bytes', () async {
       for (final exporter in kExporters) {
         final bytes = await exporter.export(sampleBook());

@@ -15,8 +15,17 @@ extension AiProviderLabel on AiProvider {
   String get defaultModel => switch (this) {
         AiProvider.gemini => 'gemini-2.5-flash',
         AiProvider.openai => 'gpt-4o-mini',
-        AiProvider.ollama => 'llama3.2',
+        AiProvider.ollama => 'qwen2.5:3b',
       };
+}
+
+String _restoredModel(AiProvider provider, String? saved) {
+  final model = saved?.trim() ?? '';
+  if (model.isEmpty) return provider.defaultModel;
+  if (provider == AiProvider.ollama && model == 'llama3.2') {
+    return AiProvider.ollama.defaultModel;
+  }
+  return model;
 }
 
 class AiSettings {
@@ -66,7 +75,7 @@ class AiSettings {
     return AiSettings(
       provider: provider,
       apiKey: json['apiKey'] as String? ?? '',
-      model: json['model'] as String? ?? (provider == AiProvider.ollama ? 'qwen2.5:3b' : provider.defaultModel),
+      model: _restoredModel(provider, json['model'] as String?),
       backendUrl: json['backendUrl'] as String? ?? (provider == AiProvider.ollama ? 'https://api.docsoncalls.com/ollama' : ''),
     );
   }
@@ -225,7 +234,9 @@ class AiService {
     final headers = <String, String>{'Content-Type': 'application/json'};
     final key = settings.apiKey.trim();
     if (key.isNotEmpty) headers['Authorization'] = 'Bearer $key';
-    final model = settings.model.trim().isEmpty ? 'llama3.2' : settings.model.trim();
+    final model = settings.model.trim().isEmpty
+        ? AiProvider.ollama.defaultModel
+        : settings.model.trim();
     final chatUri = Uri.parse(base.endsWith('/api/chat') ? base : '$base/api/chat');
     var response = await _client.post(chatUri, headers: headers, body: jsonEncode({
       'model': model,
