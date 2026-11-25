@@ -158,6 +158,23 @@ class _ChapterEditorState extends State<ChapterEditor>
     _touch();
   }
 
+  void _setBlockType(Block block, BlockType type) {
+    block.type = type;
+    if (type == BlockType.centered && block.alignment == BlockAlignment.start) {
+      block.alignment = BlockAlignment.center;
+    }
+  }
+
+  void _applyAlignment(BlockAlignment alignment) {
+    final targets = _scopeBlocks();
+    if (targets.isEmpty) return;
+    _record();
+    for (final block in targets) {
+      block.alignment = alignment;
+    }
+    _touch();
+  }
+
   void _toggleSelect(int index) {
     setState(() {
       if (_selected.contains(index)) {
@@ -343,7 +360,7 @@ class _ChapterEditorState extends State<ChapterEditor>
             PopupMenuButton<BlockType>(
               tooltip: 'Set block type / heading',
               icon: const Icon(Icons.title),
-              onSelected: (t) { _record(); for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { b.type = t; } _touch(); },
+              onSelected: (t) { _record(); for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { _setBlockType(b, t); } _touch(); },
               itemBuilder: (_) => [for (final t in BlockType.values) PopupMenuItem(value: t, child: Text(t.label))],
             ),
             IconButton(
@@ -418,7 +435,7 @@ class _ChapterEditorState extends State<ChapterEditor>
               if (v.startsWith('set:')) {
                 final t = BlockType.values.byName(v.split(':')[1]);
                 _record();
-                for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { b.type = t; }
+                for (final b in _scopeBlocks().isEmpty ? [_active].whereType<Block>() : _scopeBlocks()) { _setBlockType(b, t); }
                 _touch();
               }
             },
@@ -537,6 +554,13 @@ class _ChapterEditorState extends State<ChapterEditor>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FontToolbar(style: activeStyle, onChanged: _applyStyle),
+                const SizedBox(height: 8),
+                AlignmentToolbar(
+                  alignment: _active?.alignment,
+                  rtl: _active?.resolvedRtl(_languageCode) ??
+                      isRtlLanguage(_languageCode),
+                  onChanged: _applyAlignment,
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -736,7 +760,14 @@ class _ChapterEditorState extends State<ChapterEditor>
           onChanged: (v) { if (block.text == v) return; _record(); block.text = v; _touch(); },
           maxLines: null,
           textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-          textAlign: block.type == BlockType.centered ? TextAlign.center : (rtl ? TextAlign.right : TextAlign.left),
+            textAlign: switch (block.alignment.resolved(rtl)) {
+              BlockAlignment.left => TextAlign.left,
+              BlockAlignment.center => TextAlign.center,
+              BlockAlignment.right => TextAlign.right,
+              BlockAlignment.justify => TextAlign.justify,
+              BlockAlignment.start => TextAlign.start,
+              BlockAlignment.end => TextAlign.end,
+            },
           style: style,
           decoration: InputDecoration(
             isDense: true,
@@ -848,7 +879,7 @@ class _ChapterEditorState extends State<ChapterEditor>
                     initialValue: sampleBlock?.type ?? BlockType.paragraph,
                     decoration: const InputDecoration(labelText: 'Block type'),
                     items: [for (final type in BlockType.values) DropdownMenuItem(value: type, child: Text(type.label))],
-                    onChanged: (type) { if (type == null) return; _record(); for (final b in _scopeBlocks()) { b.type = type; } _touch(); },
+                    onChanged: (type) { if (type == null) return; _record(); for (final b in _scopeBlocks()) { _setBlockType(b, type); } _touch(); },
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<bool?>(
@@ -857,6 +888,20 @@ class _ChapterEditorState extends State<ChapterEditor>
                     decoration: const InputDecoration(labelText: 'Paragraph direction'),
                     items: const [DropdownMenuItem(value: null, child: Text('Auto (book language)')), DropdownMenuItem(value: true, child: Text('Right to left')), DropdownMenuItem(value: false, child: Text('Left to right'))],
                     onChanged: (v) { _record(); for (final b in _scopeBlocks()) { b.rtl = v; } _touch(); },
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<BlockAlignment>(
+                    key: ValueKey('alignment_${_applyScope}_${sampleBlock?.alignment}'),
+                    initialValue: sampleBlock?.alignment ?? BlockAlignment.start,
+                    decoration: const InputDecoration(labelText: 'Paragraph alignment'),
+                    items: [
+                      for (final alignment in BlockAlignment.values)
+                        DropdownMenuItem(value: alignment, child: Text(alignment.label)),
+                    ],
+                    onChanged: (alignment) {
+                      if (alignment == null) return;
+                      _applyAlignment(alignment);
+                    },
                   ),
                   const SizedBox(height: 8),
                   Row(children:[const Text('Paragraph spacing'), Expanded(child: Slider(value: (sampleBlock?.paragraphSpacing ?? 8).clamp(0,32).toDouble(), min:0, max:32, divisions:16, onChanged: (v){ _record(); for (final b in _scopeBlocks()) { b.paragraphSpacing = v; } _touch(); })), Text('${(sampleBlock?.paragraphSpacing ?? 8).round()} pt')]),
@@ -1216,6 +1261,15 @@ class _AiActionCard extends StatelessWidget {
   }
 }
 
+IconData _alignmentIcon(BlockAlignment alignment) => switch (alignment) {
+      BlockAlignment.left => Icons.format_align_left,
+      BlockAlignment.center => Icons.format_align_center,
+      BlockAlignment.right => Icons.format_align_right,
+      BlockAlignment.justify => Icons.format_align_justify,
+      BlockAlignment.start => Icons.format_align_left,
+      BlockAlignment.end => Icons.format_align_right,
+    };
+
 class _BlockTile extends StatelessWidget {
   final Block block;
   final String languageCode;
@@ -1300,6 +1354,10 @@ class _BlockTile extends StatelessWidget {
                   if (t == null) return;
                   onBeforeChange();
                   block.type = t;
+                  if (t == BlockType.centered &&
+                      block.alignment == BlockAlignment.start) {
+                    block.alignment = BlockAlignment.center;
+                  }
                   onChanged();
                 },
               ),
@@ -1315,6 +1373,19 @@ class _BlockTile extends StatelessWidget {
                 itemBuilder: (_) => const [PopupMenuItem(value:null, child: Text('Auto')), PopupMenuItem(value:true, child: Text('RTL')), PopupMenuItem(value:false, child: Text('LTR'))],
                 child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Icon(rtl?Icons.format_textdirection_r_to_l:Icons.format_textdirection_l_to_r)),
               ),
+              PopupMenuButton<BlockAlignment>(
+                tooltip: 'Alignment',
+                initialValue: block.alignment,
+                onSelected: (v) { onBeforeChange(); block.alignment = v; onChanged(); },
+                itemBuilder: (_) => [
+                  for (final a in BlockAlignment.values)
+                    PopupMenuItem(value: a, child: Text(a.label)),
+                ],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(_alignmentIcon(block.alignment.resolved(rtl))),
+                ),
+              ),
               IconButton(tooltip:'Join with previous', icon:const Icon(Icons.merge_type), onPressed:onJoinPrevious),
               IconButton(tooltip:'Split paragraph', icon:const Icon(Icons.call_split), onPressed:(){ final parts=block.text.split('\n'); if(parts.length<2) return; onBeforeChange(); block.text=parts.first; onChanged(); }),
               IconButton(tooltip:'Delete block', icon: const Icon(Icons.delete_outline), onPressed:onDelete),
@@ -1326,7 +1397,14 @@ class _BlockTile extends StatelessWidget {
             onChanged: (v) { if (block.text == v) return; onBeforeChange(); block.text = v; onChanged(); },
             maxLines: null,
             textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-            textAlign: block.type == BlockType.centered ? TextAlign.center : (rtl ? TextAlign.right : TextAlign.left),
+          textAlign: switch (block.alignment.resolved(rtl)) {
+            BlockAlignment.left => TextAlign.left,
+            BlockAlignment.center => TextAlign.center,
+            BlockAlignment.right => TextAlign.right,
+            BlockAlignment.justify => TextAlign.justify,
+            BlockAlignment.start => TextAlign.start,
+            BlockAlignment.end => TextAlign.end,
+          },
             style: textStyle,
             decoration: const InputDecoration(border: InputBorder.none, hintText: 'Write here...'),
           ),

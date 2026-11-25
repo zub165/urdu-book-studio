@@ -34,9 +34,14 @@ Widget previewBlock(
     child: Text(
       block.text.isEmpty ? ' ' : block.text,
       textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-      textAlign: block.type == BlockType.centered
-          ? TextAlign.center
-          : TextAlign.start,
+      textAlign: switch (block.alignment.resolved(rtl)) {
+        BlockAlignment.left => TextAlign.left,
+        BlockAlignment.center => TextAlign.center,
+        BlockAlignment.right => TextAlign.right,
+        BlockAlignment.justify => TextAlign.justify,
+        BlockAlignment.start => TextAlign.start,
+        BlockAlignment.end => TextAlign.end,
+      },
       style: TextStyle(
         fontFamily: style.fontFamily.isNotEmpty
             ? style.fontFamily

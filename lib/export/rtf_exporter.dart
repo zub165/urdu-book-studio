@@ -26,7 +26,8 @@ class RtfExporter extends BookExporter {
     int fontIndex(String name) => fonts.putIfAbsent(name, () => fonts.length);
     final body = StringBuffer();
 
-    void para(String text, BlockType type, TextStyleData s, bool rtl) {
+    void para(String text, BlockType type, TextStyleData s, bool rtl,
+        {BlockAlignment alignment = BlockAlignment.start}) {
       final heading = type == BlockType.heading1 ||
           type == BlockType.heading2 ||
           type == BlockType.heading3;
@@ -37,8 +38,7 @@ class RtfExporter extends BookExporter {
         _ => s.fontSize,
       };
       final fs = (sizePt * 2).round();
-      final centered = type == BlockType.centered || type == BlockType.heading1;
-      final align = centered ? r'\qc' : (rtl ? r'\qr' : r'\ql');
+      final align = alignment.resolved(rtl).rtfControl;
       final dir = rtl ? r'\rtlpar' : r'\ltrpar';
       final bold = heading || s.bold;
       final italic = type == BlockType.quote || s.italic;
@@ -58,9 +58,11 @@ class RtfExporter extends BookExporter {
     final base = TextStyleData(fontFamily: book.isRtl ? 'Noto Nastaliq Urdu' : 'Roboto');
         for (final chapter in book.allChapters) {
       body.write('\\page\n');
-      para(chapter.title, BlockType.heading1, base, book.isRtl);
+      para(chapter.title, BlockType.heading1, base, book.isRtl,
+          alignment: BlockAlignment.center);
       for (final block in chapter.blocks) {
-        para(block.text, block.type, block.style, block.resolvedRtl(lang));
+        para(block.text, block.type, block.style, block.resolvedRtl(lang),
+            alignment: block.alignment);
       }
     }
 

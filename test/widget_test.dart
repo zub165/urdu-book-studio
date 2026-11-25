@@ -195,6 +195,37 @@ void main() {
     );
   });
 
+  testWidgets('alignment controls update the active block',
+      (WidgetTester tester) async {
+    final book = Book.create(title: 'Book', author: 'Author', languageCode: 'en');
+    await tester.pumpWidget(MaterialApp(
+      home: ChapterEditor(
+        book: book,
+        chapter: book.chapters.first,
+        chapters: book.chapters,
+        onChanged: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Align right').first);
+    await tester.pumpAndSettle();
+    expect(book.chapters.first.blocks.first.alignment, BlockAlignment.right);
+
+    await tester.tap(find.text('Format'));
+    await tester.pumpAndSettle();
+    final alignmentDropdown =
+        find.byType(DropdownButtonFormField<BlockAlignment>).last;
+    await tester.ensureVisible(alignmentDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(alignmentDropdown);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Justify').last);
+    await tester.pumpAndSettle();
+
+    expect(book.chapters.first.blocks.first.alignment, BlockAlignment.justify);
+  });
+
   testWidgets('selecting a template restyles every chapter',
       (WidgetTester tester) async {
     final book = Book.create(title: 'Book', author: 'Author', languageCode: 'en');

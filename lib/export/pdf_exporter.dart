@@ -6,6 +6,16 @@ import 'package:payv/payv.dart';
 import '../models/book.dart';
 import 'exporter_base.dart';
 
+PayvTextAlign _payvTextAlign(BlockAlignment alignment, bool rtl) =>
+    switch (alignment.resolved(rtl)) {
+      BlockAlignment.start => PayvTextAlign.start,
+      BlockAlignment.left => PayvTextAlign.left,
+      BlockAlignment.center => PayvTextAlign.center,
+      BlockAlignment.right => PayvTextAlign.right,
+      BlockAlignment.end => PayvTextAlign.end,
+      BlockAlignment.justify => PayvTextAlign.justify,
+    };
+
 /// Real vector PDF with OpenType shaping, so Urdu joins and ligatures render
 /// correctly. Works on desktop, Android and web because payv is pure Dart.
 class PdfExporter extends BookExporter {
@@ -39,7 +49,9 @@ class PdfExporter extends BookExporter {
       top = page.height - margin;
     }
 
-    void write(String text, TextStyleData style, bool rtl, {double? sizeOverride}) {
+    void write(String text, TextStyleData style, bool rtl,
+        {double? sizeOverride,
+        BlockAlignment alignment = BlockAlignment.start}) {
       if (text.trim().isEmpty) return;
       final family = style.fontFamily == 'Noto Naskh Arabic' ? naskh : nastaliq;
       final font = style.bold ? family.weight(700) : family.weight(400);
@@ -68,7 +80,7 @@ class PdfExporter extends BookExporter {
           remaining,
           rect: PdfRect(margin, top - height, width, height),
           style: pdfStyle,
-          align: PayvTextAlign.start,
+          align: _payvTextAlign(alignment, rtl),
         );
         top -= height + gap;
         if (rest == null || rest == remaining) return;
@@ -84,12 +96,14 @@ class PdfExporter extends BookExporter {
     for (final chapter in book.allChapters) {
       if (!first) newPage();
       first = false;
-      write(chapter.title, base, book.isRtl, sizeOverride: 20);
+      write(chapter.title, base, book.isRtl,
+          sizeOverride: 20, alignment: BlockAlignment.center);
       for (final block in chapter.blocks) {
         write(
           block.text,
           block.style,
           block.resolvedRtl(book.languageCode),
+          alignment: block.alignment,
           sizeOverride: switch (block.type) {
             BlockType.heading1 => 20.0,
             BlockType.heading2 => 16.0,

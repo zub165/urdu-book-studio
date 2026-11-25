@@ -24,12 +24,12 @@ String blockToHtml(Block b, String languageCode) {
     BlockType.quote => 'blockquote',
     _ => 'p',
   };
-  final centered = b.type == BlockType.centered;
-  final cls = centered ? ' class="center"' : '';
-  final dir = b.resolvedRtl(languageCode) ? 'rtl' : 'ltr';
-  final style = cssForStyle(b.style) + (centered ? 'text-align:center;' : '');
+  final rtl = b.resolvedRtl(languageCode);
+  final dir = rtl ? 'rtl' : 'ltr';
+  final align = b.alignment.resolved(rtl).cssValue;
+  final style = '${cssForStyle(b.style)}text-align:$align;';
   final inner = xmlEscape(b.text).replaceAll('\n', '<br/>');
-  return '<$tag$cls dir="$dir" style="$style">$inner</$tag>';
+  return '<$tag dir="$dir" style="$style">$inner</$tag>';
 }
 
 /// A complete HTML document. With [forWord] it adds the Office namespaces

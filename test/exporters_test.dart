@@ -152,6 +152,38 @@ void main() {
       expect(restored.color, 0xFF123456);
     });
 
+    test('legacy centered blocks keep center alignment', () {
+      final block = Block.fromJson({'type': 'centered', 'text': 'Centered'});
+      expect(block.alignment, BlockAlignment.center);
+    });
+
+    test('paragraph alignment round-trips in JSON', () async {
+      final book = sampleBook();
+      book.chapters.first.blocks.first.alignment = BlockAlignment.justify;
+      final bytes = await JsonExporter().export(book);
+      final restored = await const BookImporter(languageCode: 'ur')
+          .import(bytes, 'book.json');
+      expect(
+        restored.chapters.first.blocks.first.alignment,
+        BlockAlignment.justify,
+      );
+    });
+
+    test('alignment is written to DOCX, HTML and RTF', () async {
+      final book = sampleBook();
+      book.chapters.first.blocks.first.alignment = BlockAlignment.justify;
+
+      final docx = ZipDecoder().decodeBytes(await DocxExporter().export(book));
+      final xml = utf8.decode(docx.findFile('word/document.xml')!.content as List<int>);
+      expect(xml, contains('<w:jc w:val="both"/>'));
+
+      final html = bookToHtml(book);
+      expect(html, contains('text-align:justify;'));
+
+      final rtf = utf8.decode(await RtfExporter().export(book));
+      expect(rtf, contains(r'\qj'));
+    });
+
     test('JSON book file round-trips with styles', () async {
       final book = sampleBook();
       book.chapters.first.blocks.first.style = const TextStyleData(

@@ -50,10 +50,12 @@ class DocxExporter extends BookExporter {
     for (final chapter in book.allChapters) {
       if (!first) body.write('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
       first = false;
-      body.write(_para(chapter.title, BlockType.heading1, base, rtl: rtl, lang: lang));
+      body.write(_para(chapter.title, BlockType.heading1, base,
+          rtl: rtl, lang: lang, alignment: BlockAlignment.center));
       for (final block in chapter.blocks) {
         body.write(_para(block.text, block.type, block.style,
-            rtl: block.resolvedRtl(lang), lang: lang));
+            rtl: block.resolvedRtl(lang), lang: lang,
+            alignment: block.alignment));
       }
     }
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -65,7 +67,8 @@ class DocxExporter extends BookExporter {
   }
 
   String _para(String text, BlockType type, TextStyleData s,
-      {required bool rtl, required String lang}) {
+      {required bool rtl, required String lang,
+      BlockAlignment alignment = BlockAlignment.start}) {
     final heading = type == BlockType.heading1 ||
         type == BlockType.heading2 ||
         type == BlockType.heading3;
@@ -85,9 +88,7 @@ class DocxExporter extends BookExporter {
     pPr.write('<w:spacing w:val="${(s.letterSpacing * 20).round()}" '
         'w:line="${(s.lineHeight * 240).round()}" w:lineRule="auto"/>');
     if (type == BlockType.quote) pPr.write('<w:ind w:left="720" w:right="720"/>');
-    if (type == BlockType.centered || type == BlockType.heading1) {
-      pPr.write('<w:jc w:val="center"/>');
-    }
+    pPr.write('<w:jc w:val="${alignment.resolved(rtl).docxValue}"/>');
     pPr.write('</w:pPr>');
 
     final rPr = '<w:rPr>'

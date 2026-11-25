@@ -5,6 +5,52 @@ import '../core/text_direction.dart';
 
 enum BlockType { heading1, heading2, heading3, paragraph, quote, centered }
 
+enum BlockAlignment { start, left, center, right, end, justify }
+
+extension BlockAlignmentX on BlockAlignment {
+  String get label => switch (this) {
+        BlockAlignment.start => 'Start',
+        BlockAlignment.left => 'Left',
+        BlockAlignment.center => 'Center',
+        BlockAlignment.right => 'Right',
+        BlockAlignment.end => 'End',
+        BlockAlignment.justify => 'Justify',
+      };
+
+  BlockAlignment resolved(bool rtl) => switch (this) {
+        BlockAlignment.start => rtl ? BlockAlignment.right : BlockAlignment.left,
+        BlockAlignment.end => rtl ? BlockAlignment.left : BlockAlignment.right,
+        _ => this,
+      };
+
+  String get cssValue => switch (this) {
+        BlockAlignment.start => 'start',
+        BlockAlignment.left => 'left',
+        BlockAlignment.center => 'center',
+        BlockAlignment.right => 'right',
+        BlockAlignment.end => 'end',
+        BlockAlignment.justify => 'justify',
+      };
+
+  String get docxValue => switch (this) {
+        BlockAlignment.start => 'left',
+        BlockAlignment.left => 'left',
+        BlockAlignment.center => 'center',
+        BlockAlignment.end => 'right',
+        BlockAlignment.right => 'right',
+        BlockAlignment.justify => 'both',
+      };
+
+  String get rtfControl => switch (this) {
+        BlockAlignment.start => r'\ql',
+        BlockAlignment.left => r'\ql',
+        BlockAlignment.center => r'\qc',
+        BlockAlignment.end => r'\qr',
+        BlockAlignment.right => r'\qr',
+        BlockAlignment.justify => r'\qj',
+      };
+}
+
 extension BlockTypeLabel on BlockType {
   String get label => switch (this) {
         BlockType.heading1 => 'Heading 1',
@@ -105,6 +151,7 @@ class Block {
   BlockType type;
   String text;
   bool? rtl; // null = follow the book's language
+  BlockAlignment alignment;
   double paragraphSpacing; // points before/after spacing in preview/export
   TextStyleData style;
 
@@ -113,15 +160,20 @@ class Block {
     this.type = BlockType.paragraph,
     this.text = '',
     this.rtl,
+    BlockAlignment? alignment,
     this.paragraphSpacing = 8,
     TextStyleData? style,
   })  : id = id ?? const Uuid().v4(),
+        alignment = alignment ??
+            (type == BlockType.centered
+                ? BlockAlignment.center
+                : BlockAlignment.start),
         style = style ?? const TextStyleData();
 
   bool resolvedRtl(String languageCode) => rtl ?? isRtlLanguage(languageCode);
 
   Map<String, dynamic> toJson() => {
-        'id': id, 'type': type.name, 'text': text, 'rtl': rtl, 'paragraphSpacing': paragraphSpacing, 'style': style.toJson(),
+        'id': id, 'type': type.name, 'text': text, 'rtl': rtl, 'alignment': alignment.name, 'paragraphSpacing': paragraphSpacing, 'style': style.toJson(),
       };
 
   factory Block.fromJson(Map<String, dynamic> j) => Block(
@@ -129,6 +181,14 @@ class Block {
         type: BlockType.values.byName(j['type'] as String? ?? 'paragraph'),
         text: j['text'] as String? ?? '',
         rtl: j['rtl'] as bool?,
+        alignment: j['alignment'] == null
+            ? (j['type'] == 'centered'
+                ? BlockAlignment.center
+                : BlockAlignment.start)
+            : BlockAlignment.values.firstWhere(
+                (a) => a.name == j['alignment'],
+                orElse: () => BlockAlignment.start,
+              ),
         paragraphSpacing: (j['paragraphSpacing'] as num?)?.toDouble() ?? 8,
         style: TextStyleData.fromJson((j['style'] as Map<String, dynamic>?) ?? const {}),
       );

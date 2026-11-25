@@ -17,6 +17,49 @@ const List<(String, int)> kTextColors = [
   ('Gray', 0xFF6B7280),
 ];
 
+class AlignmentToolbar extends StatelessWidget {
+  final BlockAlignment? alignment;
+  final bool rtl;
+  final ValueChanged<BlockAlignment> onChanged;
+
+  const AlignmentToolbar({
+    super.key,
+    required this.alignment,
+    required this.rtl,
+    required this.onChanged,
+  });
+
+  static const _options = <BlockAlignment>[
+    BlockAlignment.left,
+    BlockAlignment.center,
+    BlockAlignment.right,
+    BlockAlignment.justify,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = (alignment ?? BlockAlignment.start).resolved(rtl);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('Align'),
+        const SizedBox(width: 8),
+        ToggleButtons(
+          isSelected: [for (final option in _options) option == selected],
+          constraints: const BoxConstraints(minWidth: 38, minHeight: 32),
+          onPressed: alignment == null ? null : (i) => onChanged(_options[i]),
+          children: const [
+            Tooltip(message: 'Align left', child: Icon(Icons.format_align_left, size: 20)),
+            Tooltip(message: 'Align center', child: Icon(Icons.format_align_center, size: 20)),
+            Tooltip(message: 'Align right', child: Icon(Icons.format_align_right, size: 20)),
+            Tooltip(message: 'Justify', child: Icon(Icons.format_align_justify, size: 20)),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 /// Controls for the selected block. Disabled when no block is selected.
 class FontToolbar extends StatefulWidget {
   final TextStyleData? style;
