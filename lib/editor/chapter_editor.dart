@@ -94,6 +94,10 @@ class _ChapterEditorState extends State<ChapterEditor>
   int get _characterCount =>
       _chapter.blocks.fold<int>(0, (total, block) => total + block.text.length);
 
+  String get _countLabel =>
+      '$_wordCount ${_wordCount == 1 ? 'word' : 'words'} · '
+      '$_characterCount ${_characterCount == 1 ? 'character' : 'characters'}';
+
   List<Map<String, dynamic>> _snapshot() =>
       _chapter.blocks.map((b) => b.toJson()).toList();
 
@@ -340,7 +344,7 @@ class _ChapterEditorState extends State<ChapterEditor>
           },
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(_chapter.title),
-            Text('$_wordCount words · $_characterCount characters · $_saveStatus', style: Theme.of(context).textTheme.bodySmall),
+            Text('$_countLabel · $_saveStatus', style: Theme.of(context).textTheme.bodySmall),
           ]),
         ),
             actions: [
@@ -566,6 +570,11 @@ class _ChapterEditorState extends State<ChapterEditor>
                   spacing: 8,
                   runSpacing: 8,
                   children: [
+                    Chip(
+                      avatar: const Icon(Icons.notes, size: 16),
+                      label: Text(_countLabel),
+                      visualDensity: VisualDensity.compact,
+                    ),
                     FilledButton.tonalIcon(
                       onPressed: _selected.isNotEmpty || activeStyle != null
                           ? () => _applyStyleToAll(

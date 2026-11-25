@@ -226,6 +226,25 @@ void main() {
     expect(book.chapters.first.blocks.first.alignment, BlockAlignment.justify);
   });
 
+  testWidgets('editor shows live word and character counts',
+      (WidgetTester tester) async {
+    final book = Book.create(title: 'Book', author: 'Author', languageCode: 'en');
+    await tester.pumpWidget(MaterialApp(
+      home: ChapterEditor(
+        book: book,
+        chapter: book.chapters.first,
+        chapters: book.chapters,
+        onChanged: () {},
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'Hello world');
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 words · 11 characters'), findsWidgets);
+  });
+
   testWidgets('selecting a template restyles every chapter',
       (WidgetTester tester) async {
     final book = Book.create(title: 'Book', author: 'Author', languageCode: 'en');
